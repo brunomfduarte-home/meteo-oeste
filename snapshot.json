@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T15:07:54.989169+00:00",
+  "generatedAt": "2026-11-08T15:11:14.699868+00:00",
   "anchor": "2026-11-08T15:00:00+00:00",
   "warnings": [
     {
@@ -203,24 +203,6 @@
       "end": "2026-11-11T06:00:00+00:00"
     },
     {
-      "source": "GFS",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "value": 35.3,
-      "level": 0,
-      "start": "2026-11-12T10:00:00+00:00",
-      "end": "2026-11-12T11:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "+72 a +168 h",
-      "metric": "Chuva 6h",
-      "value": 5.7,
-      "level": 0,
-      "start": "2026-11-13T18:00:00+00:00",
-      "end": "2026-11-14T00:00:00+00:00"
-    },
-    {
       "source": "ECMWF",
       "window": "0–6 h",
       "metric": "Rajada",
@@ -282,24 +264,6 @@
       "level": 0,
       "start": "2026-11-10T18:00:00+00:00",
       "end": "2026-11-11T00:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "value": 48.2,
-      "level": 0,
-      "start": "2026-11-12T17:00:00+00:00",
-      "end": "2026-11-12T18:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "+72 a +168 h",
-      "metric": "Chuva 6h",
-      "value": 6.6,
-      "level": 0,
-      "start": "2026-11-14T18:00:00+00:00",
-      "end": "2026-11-15T00:00:00+00:00"
     },
     {
       "source": "NOAA GEFS",
@@ -381,30 +345,6 @@
       "N": 31,
       "probability": {
         "Amarelo": 2,
-        "Laranja": 0,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "NOAA GEFS",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "n": 31,
-      "N": 31,
-      "probability": {
-        "Amarelo": 0,
-        "Laranja": 0,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "NOAA GEFS",
-      "window": "+72 a +168 h",
-      "metric": "Chuva 6h",
-      "n": 31,
-      "N": 31,
-      "probability": {
-        "Amarelo": 0,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -491,30 +431,6 @@
         "Amarelo": 1,
         "Laranja": 1,
         "Vermelho": 0
-      }
-    },
-    {
-      "source": "ECMWF ENS",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "n": 51,
-      "N": 51,
-      "probability": {
-        "Amarelo": 6,
-        "Laranja": 4,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "ECMWF ENS",
-      "window": "+72 a +168 h",
-      "metric": "Chuva 6h",
-      "n": 51,
-      "N": 51,
-      "probability": {
-        "Amarelo": 1,
-        "Laranja": 1,
-        "Vermelho": 1
       }
     }
   ],

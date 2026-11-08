@@ -8,14 +8,38 @@ import pydeck as pdk
 from datetime import datetime, time, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Análise Ponto a Ponto",
+    page_title="Meteo Óbidos — Comando Operacional & Avisos IPMA",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel tático com **localização dinâmica no mapa (ponto específico)**, análise por polígonos e gerador de avisos IPMA/UNDRR.")
+st.markdown("Painel tático de Proteção Civil, mapeamento territorial por polígonos, análise de picos temporais e gerador de avisos em Português.")
+
+# ==============================================================================
+# DICIONÁRIOS DE TRADUÇÃO DE DATAS PARA PORTUGUÊS DE PORTUGAL
+# ==============================================================================
+dias_semana_pt = {
+    'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 'Wednesday': 'Quarta-feira',
+    'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
+}
+
+meses_pt = {
+    'January': 'janeiro', 'February': 'fevereiro', 'March': 'março', 'April': 'abril',
+    'May': 'maio', 'June': 'junho', 'July': 'julho', 'August': 'agosto',
+    'September': 'setembro', 'October': 'outubro', 'November': 'novembro', 'December': 'dezembro'
+}
+
+def formatar_data_pt(dt):
+    dia_sem = dias_semana_pt.get(dt.strftime('%A'), dt.strftime('%A'))
+    mes = meses_pt.get(dt.strftime('%B'), dt.strftime('%B'))
+    return f"{dia_sem}, {dt.day} de {mes} de {dt.year} às {dt.strftime('%H:%M')}"
+
+def formatar_data_curta_pt(dt):
+    dia_sem = dias_semana_pt.get(dt.strftime('%A'), dt.strftime('%A'))
+    mes = meses_pt.get(dt.strftime('%B'), dt.strftime('%B'))
+    return f"{dia_sem}, {dt.day} de {mes}, das {dt.strftime('%H:%M')}"
 
 # ==============================================================================
 # SEGMENTAÇÃO GEOMORFOLÓGICA E POLÍGONOS DOS SETORES DE ÓBIDOS
@@ -63,7 +87,6 @@ setores_obidos = {
 st.sidebar.header("⚙️ Parâmetros de Análise Global")
 setor_selecionado = st.sidebar.selectbox("Selecionar Setor / Vista", list(setores_obidos.keys()))
 
-# Se selecionar Ponto Específico, ativa os seletores de Lat/Lon na sidebar
 if setor_selecionado == "📍 Ponto Específico (GPS Personalizado)":
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 📍 Localização Específica (GPS)")
@@ -106,7 +129,6 @@ def obter_dados_cruzados(lat, lon, past, forecast):
         return df
     return pd.DataFrame()
 
-# Tratamento para visão consolidada vs setorial vs ponto específico
 if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
     sub_chaves = [k for k in setores_obidos.keys() if k not in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (GPS Personalizado)"]]
     dfs = []
@@ -153,16 +175,12 @@ if not df.empty:
     else:
         nivel, icone_ipma, cor_hex = "VERDE", "🟢", "#008000"
 
-    # ==============================================================================
-    # POP-UP AUTOMÁTICO (TOAST)
-    # ==============================================================================
     proximo_de_aviso = (pico_r >= 60) or (pico_c >= 8)
     if nivel in ["AMARELO", "LARANJA", "VERMELHO"]:
-        st.toast(f"{icone_ipma} ATENÇÃO: Aviso {nivel} ativo ou iminente na localização selecionada!", icon="⚠️")
+        st.toast(f"{icone_ipma} ATENÇÃO: Aviso {nivel} ativo ou iminente em {setor_selecionado}!", icon="⚠️")
     elif proximo_de_aviso:
-        st.toast(f"⚡ Parâmetros próximos do limiar de aviso na localização selecionada (Rajada: {pico_r:.1f} km/h).", icon="🔔")
+        st.toast(f"⚡ Parâmetros próximos do limiar de aviso em {setor_selecionado} (Rajada: {pico_r:.1f} km/h).", icon="🔔")
 
-    # Cabeçalho Principal com Destaque Sublinhado à Cor do Aviso
     st.markdown(
         f"""
         <div style="border-bottom: 4px solid {cor_hex}; padding-bottom: 8px; margin-bottom: 16px;">
@@ -173,7 +191,7 @@ if not df.empty:
     )
 
     # ==============================================================================
-    # MAPA TÁTICO COM POLÍGONOS E PONTO DE INTERESSE
+    # MAPA TÁTICO
     # ==============================================================================
     st.subheader("🗺️ Mapa Tático de Risco — Concelho de Óbidos & Ponto Selecionado")
     st.caption("Visualização geográfica das zonas geomorfológicas e marcador de localização de alta precisão.")
@@ -217,7 +235,6 @@ if not df.empty:
         auto_highlight=True,
     )
 
-    # Camada adicional de ponto selecionado no mapa
     dados_ponto = [{
         "nome": "Ponto de Análise",
         "lat": lat_analise,
@@ -243,10 +260,10 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # MÓDULO MULTILÍNGUE DE GESTÃO DE AVISOS E EVENTOS (PADRÃO UNDRR)
+    # MÓDULO DE GESTÃO DE AVISOS E EVENTOS (EM PORTUGUÊS COM ÍCONES IPMA)
     # ==============================================================================
     st.subheader("📢 Central de Avisos & Recomendações (Padrão UNDRR)")
-    st.markdown("Defina a **data/hora de início e fim** da monitorização para gerar avisos com os ícones e cores oficiais do IPMA.")
+    st.markdown("Defina a **data/hora de início e fim** da monitorização para gerar avisos totalmente em Português com os ícones oficiais do IPMA (ex: 🌧️ precipitação, 💨 vento).")
 
     idioma = st.radio("Idioma do Comunicado / Language", ["Português", "English"], horizontal=True)
 
@@ -296,8 +313,8 @@ if not df.empty:
                     h_v_ini = df_picos_vento['Hora'].min().strftime('%d/%m às %H:%M')
                     h_v_fim = df_picos_vento['Hora'].max().strftime('%H:%M')
                     v_val = df_picos_vento['Rajada (km/h)'].max()
-                    picos_texto_pt += f"\n  • ⚡ *Pico de Rajada Intensa:* de {v_val:.0f} km/h entre {h_v_ini}h e {h_v_fim}h."
-                    picos_texto_en += f"\n  • ⚡ *Severe Wind Peak:* gusts up to {v_val:.0f} km/h between {h_v_ini}h and {h_v_fim}h."
+                    picos_texto_pt += f"\n  • 💨 *Pico de Vento / Rajada Intensa:* de {v_val:.0f} km/h entre {h_v_ini}h e {h_v_fim}h."
+                    picos_texto_en += f"\n  • 💨 *Severe Wind Peak:* gusts up to {v_val:.0f} km/h between {h_v_ini}h and {h_v_fim}h."
 
                 if not df_picos_chuva.empty:
                     h_c_ini = df_picos_chuva['Hora'].min().strftime('%d/%m às %H:%M')
@@ -365,8 +382,9 @@ if not df.empty:
                 rec_pop = "• Follow standard safety practices and enjoy the event."
                 rec_org = "• Maintain routine safety and venue operational standards."
 
-        fmt_ini_pt = dt_inicio.strftime('%A, %d de %B de %Y, às %H:%M').capitalize()
-        fmt_fim_pt = dt_fim.strftime('%A, %d de %B de %Y, às %H:%M').capitalize()
+        # CHAMADA DAS FUNÇÕES DE FORMATAÇÃO DE DATA EM PORTUGUÊS
+        fmt_ini_pt = formatar_data_pt(dt_inicio)
+        fmt_fim_pt = formatar_data_pt(dt_fim)
 
         fmt_ini_en = dt_inicio.strftime('%A, %B %d, %Y, at %H:%M')
         fmt_fim_en = dt_fim.strftime('%A, %B %d, %Y, at %H:%M')
@@ -378,8 +396,8 @@ if not df.empty:
                     f"📅 *Período:* De {fmt_ini_pt} até {fmt_fim_pt}\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* — SETOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n"
-                    f"• Rajada máxima prevista: *{vento_janela_max:.0f} km/h*\n"
-                    f"• Precipitação acumulada: *{acum_janela_total:.1f} mm* (Temp. média: {temp_janela_media:.0f} °C)\n"
+                    f"• 💨 Rajada máxima prevista: *{vento_janela_max:.0f} km/h*\n"
+                    f"• 🌧️ Precipitação acumulada: *{acum_janela_total:.1f} mm* (Temp. média: {temp_janela_media:.0f} °C)\n"
                     f"{picos_texto_pt}\n"
                     f"🛡️ *Medidas de Autoproteção:*\n"
                     f"{rec_pop}\n\n"
@@ -393,7 +411,7 @@ if not df.empty:
                     f"📅 *Período do Evento:* De {fmt_ini_pt} até {fmt_fim_pt}\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* | Setor: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n"
-                    f"• Probabilidade de chuva: *{prob_c}%* | Rajada máxima: *{vento_janela_max:.0f} km/h*.\n"
+                    f"• 🌧️ Probabilidade de chuva: *{prob_c}%* | 💨 Rajada máxima: *{vento_janela_max:.0f} km/h*.\n"
                     f"{picos_texto_pt}\n"
                     f"👉 *Recomendações para Organizadores:*\n"
                     f"{rec_org}\n\n"
@@ -407,8 +425,8 @@ if not df.empty:
                     f"📅 *Period:* From {fmt_ini_en} to {fmt_fim_en}\n\n"
                     f"⚠️ *{ico_j} {nivel_j} ALERT* — SECTOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n"
-                    f"• Expected peak gust wind: *{vento_janela_max:.0f} km/h*\n"
-                    f"• Total accumulated precipitation: *{acum_janela_total:.1f} mm* (Avg temp: {temp_janela_media:.0f} °C)\n"
+                    f"• 💨 Expected peak gust wind: *{vento_janela_max:.0f} km/h*\n"
+                    f"• 🌧️ Total accumulated precipitation: *{acum_janela_total:.1f} mm* (Avg temp: {temp_janela_media:.0f} °C)\n"
                     f"{picos_texto_en}\n"
                     f"🛡️ *Self-Protection Measures:*\n"
                     f"{rec_pop}\n\n"
@@ -422,7 +440,7 @@ if not df.empty:
                     f"📅 *Event Time Frame:* From {fmt_ini_en} to {fmt_fim_en}\n\n"
                     f"⚠️ *{ico_j} {nivel_j} ALERT* | Sector: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n"
-                    f"• Rain probability: *{prob_c}%* | Peak wind gust: *{vento_janela_max:.0f} km/h*.\n"
+                    f"• 🌧️ Rain probability: *{prob_c}%* | 💨 Peak wind gust: *{vento_janela_max:.0f} km/h*.\n"
                     f"{picos_texto_en}\n"
                     f"👉 *Recommendations for Organizers:*\n"
                     f"{rec_org}\n\n"

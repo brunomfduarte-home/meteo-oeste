@@ -8,19 +8,23 @@ import pydeck as pdk
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Mapa de Risco",
-    page_icon="🗺️",
+    page_title="Meteo Óbidos — Comando Operacional & Concelho",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🗺️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel de suporte à decisão com **mapa visual de risco por setor**, validação cruzada e picos temporais críticos.")
+st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
+st.markdown("Painel de suporte à decisão com **análisis setorial e global do concelho**, mapa visual de risco e picos temporais críticos.")
 
 # ==============================================================================
-# SEGMENTAÇÃO GEOMORFOLÓGICA DE ÓBIDOS
+# SEGMENTAÇÃO GEOMORFOLÓGICA DE ÓBIDOS (Incluindo a opção Consolidada)
 # ==============================================================================
 setores_obidos = {
+    "🌍 Todo o Concelho (Consolidado)": {
+        "lat": 39.3700, "lon": -9.1600, 
+        "perfil": "Visão global agregada de todo o território de Óbidos (média dos três setores geomorfológicos)."
+    },
     "🏛️ Centro Histórico (Vila / Cota Alta)": {
         "lat": 39.3607, "lon": -9.1572, 
         "perfil": "Zona elevada e muralhada. Exposição direta a rajadas canalizadas."
@@ -36,7 +40,7 @@ setores_obidos = {
 }
 
 st.sidebar.header("⚙️ Parâmetros de Análise")
-setor_selecionado = st.sidebar.selectbox("Selecionar Setor em Destaque", list(setores_obidos.keys()))
+setor_selecionado = st.sidebar.selectbox("Selecionar Setor / Vista", list(setores_obidos.keys()))
 info_setor = setores_obidos[setor_selecionado]
 
 dias_historico = st.sidebar.slider("Dias de Calibração (Passado)", min_value=1, max_value=5, value=3)
@@ -63,7 +67,20 @@ def obter_dados_cruzados(lat, lon, past, forecast):
         return df
     return pd.DataFrame()
 
-df = obter_dados_cruzados(info_setor["lat"], info_setor["lon"], dias_historico, dias_previsao)
+# Se for "Todo o Concelho", calculamos a média ponderada dos 3 subsetores principais
+if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
+    sub_chaves = [k for k in setores_obidos.keys() if k != "🌍 Todo o Concelho (Consolidado)"]
+    dfs = []
+    for sk in sub_chaves:
+        df_sub = obter_dados_cruzados(setores_obidos[sk]["lat"], setores_obidos[sk]["lon"], dias_historico, dias_previsao)
+        if not df_sub.empty:
+            dfs.append(df_sub.set_index('Hora'))
+    if dfs:
+        df = pd.concat(dfs).groupby('Hora').mean().reset_index()
+    else:
+        df = pd.DataFrame()
+else:
+    df = obter_dados_cruzados(info_setor["lat"], info_setor["lon"], dias_historico, dias_previsao)
 
 if not df.empty:
     agora = datetime.now()
@@ -98,7 +115,7 @@ if not df.empty:
         nivel, cor_alerta = "VERDE", "success"
 
     # Alerta Principal no Topo
-    mensagem_topo = f"🚨 **ESTADO DE ALERTA: {nivel}** | Setor: {setor_selecionado} | Grau de Confiança: **{confianca}%**"
+    mensagem_topo = f"🚨 **ESTADO DE ALERTA: {nivel}** | Vista: {setor_selecionado} | Grau de Confiança: **{confianca}%**"
     if cor_alerta == "error": st.error(mensagem_topo)
     elif cor_alerta == "warning": st.warning(mensagem_topo)
     elif cor_alerta == "info": st.info(mensagem_topo)
@@ -107,11 +124,13 @@ if not df.empty:
     # ==============================================================================
     # MAPA VISUAL INTERACTIVO POR SETOR DE ÓBIDOS (PYDECK)
     # ==============================================================================
-    st.subheader("🗺️ Mapa Operacional de Risco por Setor de Óbidos")
-    st.caption("Visualização geográfica das áreas do concelho com marcação cromática baseada no nível de alerta atual.")
+    st.subheader("🗺️ Mapa Operacional de Risco — Concelho de Óbidos")
+    st.caption("Visualização geográfica de todas as áreas do concelho com marcação cromática baseada no nível de alerta atual.")
 
     dados_mapa = []
     for nome_s, info_s in setores_obidos.items():
+        if nome_s == "🌍 Todo o Concelho (Consolidado)":
+            continue
         df_s = obter_dados_cruzados(info_s["lat"], info_s["lon"], 1, 2)
         if not df_s.empty:
             r_max = df_s['Rajada (km/h)'].max()
@@ -165,7 +184,7 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # DESTAQUE DOS PICOS TEMPORAIS (Com correção da formatação de hora)
+    # DESTAQUE DOS PICOS TEMPORAIS
     # ==============================================================================
     st.subheader("⏱️ Picos Temporais Críticos & Parâmetros em Destaque")
     
@@ -206,12 +225,12 @@ if not df.empty:
     with st.expander("📋 Gerar Comunicado Técnico de Alerta Operacional"):
         minuta = (
             f"🚨 **BOLETIM TÉCNICO DE ALERTA — MUNICÍPIO DE ÓBIDOS**\n"
-            f"📍 **Setor:** {setor_selecionado}\n"
+            f"📍 **Âmbito:** {setor_selecionado}\n"
             f"🎯 **Nível de Risco:** {nivel} (Confiança: {confianca}%)\n\n"
             f"⏱️ **Picos Temporais Críticos:**\n"
             f"- *Rajada Máxima:* {pico_r:.1f} km/h (Previsto para {hora_pico_rajada_fmt})\n"
             f"- *Intensidade Máxima de Chuva:* {pico_c:.1f} mm/h (Previsto para {hora_pico_chuva_fmt})\n\n"
-            f"💡 **Recomendação Operacional:** Monitorizar infraestruturas sensíveis no setor com base no mapa tático."
+            f"💡 **Recomendação Operacional:** Monitorizar infraestruturas em todo o concelho com base no mapa tático."
         )
         st.code(minuta, language="markdown")
 

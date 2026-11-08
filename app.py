@@ -5,153 +5,156 @@ import plotly.express as px
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="Meteo Oeste — Alertas IPMA",
-    page_icon="🚨",
+    page_title="Meteo Oeste — Operacional & Proteção Civil",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🚨 Monitorização Meteorológica com Alertas IPMA — Oeste")
-st.markdown("Painel analítico integrado com verificação automática de **limiares oficiais do IPMA** (Previsão e Nowcast) para Óbidos e região.")
+st.title("🛡️ Centro de Análise e Alerta Meteorológico — Região de Óbidos & Oeste")
+st.markdown("Painel de Apoio à Decisão Operacional (Proteção Civil / Eventos ao Ar Livre) com base em limiares IPMA e nowcast horário.")
 
-# Barra Lateral de Controlo
-st.sidebar.header("⚙️ Parâmetros Geográficos")
-concelho = st.sidebar.selectbox(
-    "Concelho / Zona",
-    ["Óbidos", "Leiria", "Caldas da Rainha", "Peniche", "Torres Vedras", "Alenquer"]
-)
-
-dias_historico = st.sidebar.slider("Dias Anteriores (Histórico)", min_value=1, max_value=7, value=3)
-dias_previsao = st.sidebar.slider("Dias de Previsão", min_value=1, max_value=7, value=3)
-
-# Coordenadas geográficas oficiais
+# Configuração de Coordenadas Geográficas da Região
 coords = {
-    "Óbidos": {"lat": 39.3607, "lon": -9.1572},
-    "Leiria": {"lat": 39.7436, "lon": -8.8071},
-    "Caldas da Rainha": {"lat": 39.4036, "lon": -9.1354},
-    "Peniche": {"lat": 39.3558, "lon": -9.3811},
-    "Torres Vedras": {"lat": 39.0918, "lon": -9.2577},
-    "Alenquer": {"lat": 39.0560, "lon": -9.0076}
+    "Óbidos (Sede / Castelo)": {"lat": 39.3607, "lon": -9.1572, "risco": "Inundações urbanas e bacia do Arnóia"},
+    "Bom Sucesso / Lagoa de Óbidos": {"lat": 39.3800, "lon": -9.2200, "risco": "Vento forte e agitação marítima"},
+    "Leiria": {"lat": 39.7436, "lon": -8.8071, "risco": "Linhas de instabilidade geral"},
+    "Peniche (Costenta)": {"lat": 39.3558, "lon": -9.3811, "risco": "Exposição marítima extrema e rajadas"},
+    "Caldas da Rainha": {"lat": 39.4036, "lon": -9.1354, "risco": "Escorrências urbanas"}
 }
 
-lat = coords[concelho]["lat"]
-lon = coords[concelho]["lon"]
+# Barra Lateral Operacional
+st.sidebar.header("⚙️ Parâmetros Operacionais")
+local_selecionado = st.sidebar.selectbox("Local de Monitorização", list(coords.keys()))
+lat = coords[local_selecionado]["lat"]
+lon = coords[local_selecionado]["lon"]
 
-# --- FUNÇÃO DE AQUISIÇÃO DE DADOS (Open-Meteo com dados horários e diários) ---
-@st.cache_data(ttl=1800)
-def obter_dados_completos(lat, lon, past_days, forecast_days):
-    # Pedido que inclui dados horários (para nowcast/análise fina) e diários (previsão)
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&past_days={past_days}&forecast_days={forecast_days}&hourly=precipitation,wind_speed_10m,wind_gusts_10m,temperature_2m,relative_humidity_2m&daily=precipitation_sum,temperature_2m_mean,wind_speed_10m_max"
-    
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
+janela_analise = st.sidebar.selectbox("Janela Temporal de Análise", ["Próximas 24 Horas (Nowcast Fino)", "Próximos 3 Dias (Previsão)", "Tendência de 7 Dias"])
+
+st.sidebar.divider()
+st.sidebar.markdown(f"📍 **Perfil de Risco Local:**\n_{coords[local_selecionado]['risco']}_")
+
+# Aquisição de Dados Meteorológicos Horários e Diários (Open-Meteo / Modelos de Alta Resolução)
+@st.cache_data(ttl=900) # Cache de 15 minutos para manter frescura operacional
+def buscar_dados_operacionais(lat, lon):
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&past_days=1&forecast_days=3&hourly=precipitation,wind_speed_10m,wind_gusts_10m,temperature_2m,surface_pressure&daily=precipitation_sum,wind_speed_10m_max"
+    res = requests.get(url)
+    if res.status_code == 200:
+        data = res.json()
         
-        # Processar dados diários
-        daily = data.get("daily", {})
-        df_daily = pd.DataFrame({
-            'Data': pd.to_datetime(daily.get("time", [])),
-            'Precipitação (mm)': daily.get("precipitation_sum", []),
-            'Temperatura Média (°C)': daily.get("temperature_2m_mean", []),
-            'Vento Máximo (km/h)': daily.get("wind_speed_10m_max", [])
-        })
-        
-        # Processar dados horários (para simular nowcast de picos)
-        hourly = data.get("hourly", {})
         df_hourly = pd.DataFrame({
-            'Hora': pd.to_datetime(hourly.get("time", [])),
-            'Precipitação Horária (mm)': hourly.get("precipitation", []),
-            'Rajada Vento (km/h)': hourly.get("wind_gusts_10m", [])
+            'Hora': pd.to_datetime(data['hourly']['time']),
+            'Precipitação (mm)': data['hourly']['precipitation'],
+            'Vento (km/h)': data['hourly']['wind_speed_10m'],
+            'Rajada (km/h)': data['hourly']['wind_gusts_10m'],
+            'Pressão (hPa)': data['hourly']['surface_pressure']
         })
         
-        return df_daily, df_hourly
+        df_daily = pd.DataFrame({
+            'Data': pd.to_datetime(data['daily']['time']),
+            'Chuva Acumulada (mm)': data['daily']['precipitation_sum'],
+            'Rajada Máxima (km/h)': data['daily']['wind_speed_10m_max']
+        })
+        return df_hourly, df_daily
     return pd.DataFrame(), pd.DataFrame()
 
-df_daily, df_hourly = obter_dados_completos(lat, lon, dias_historico, dias_previsao)
+df_hourly, df_daily = buscar_dados_operacionais(lat, lon)
 
-if not df_daily.empty and not df_hourly.empty:
-    
-    # --- MOTOR DE AVALIAÇÃO DE CRITÉRIOS IPMA ---
-    # Critérios oficiais de Portugal Continental para Vento (Rajadas em km/h) e Chuva (mm/h)
-    def avaliar_nivel_ipma(vento_max, chuva_horaria):
-        # Vento Laranja: 91-130 | Amarelo: 70-90
-        # Chuva Laranja: 21-40 mm/h | Amarelo: 10-20 mm/h
-        if vento_max > 130 or chuva_horaria > 40:
-            return "VERMELHO", "🔴 **AVISO VERMELHO:** Risco extremo meteorológico!"
-        elif (91 <= vento_max <= 130) or (21 <= chuva_horaria <= 40):
-            return "LARANJA", "🟠 **AVISO LARANJA:** Situação meteorológica de risco moderado a elevado."
-        elif (70 <= vento_max < 91) or (10 <= chuva_horaria < 21):
-            return "AMARELO", "🟡 **AVISO AMARELO:** Situação de risco para determinadas atividades."
-        return "VERDE", "🟢 **ESTADO NORMAL:** Sem avisos meteorológicos ativos."
-
-    # Verificar picos atuais horários (Nowcast / Curto Prazo)
-    pico_vento_atual = df_hourly['Rajada Vento (km/h)'].max()
-    pico_chuva_atual = df_hourly['Precipitação Horária (mm)'].max()
-    
-    nivel, mensagem_alerta = avaliar_nivel_ipma(pico_vento_atual, pico_chuva_atual)
-
-    # Exibição visual do Alerta IPMA no Topo
-    if nivel == "VERMELHO":
-        st.error(mensagem_alerta)
-    elif nivel == "LARANJA":
-        st.warning(mensagem_alerta)
-    elif nivel == "AMARELO":
-        st.info(mensagem_alerta)
+if not df_hourly.empty:
+    # Filtrar apenas as próximas 24h ou 3 dias conforme escolha
+    agora = datetime.now()
+    if janela_analise == "Próximas 24 Horas (Nowcast Fino)":
+        df_focal = df_hourly[(df_hourly['Hora'] >= agora - timedelta(hours=6)) & (df_hourly['Hora'] <= agora + timedelta(hours=24))]
     else:
-        st.success(mensagem_alerta)
+        df_focal = df_hourly
 
-    st.markdown(f"**Pico Máximo Detetado (Nowcast/Horário):** Rajada de Vento de **{pico_vento_atual:.1f} km/h** | Precipitação Horária de **{pico_chuva_atual:.1f} mm/h**")
+    # --- MOTOR EXPERT DE AVALIAÇÃO DE RISCO IPMA ---
+    max_rajada = df_focal['Rajada (km/h)'].max()
+    max_chuva_hora = df_focal['Precipitação (mm)'].max()
+    acumulado_janela = df_focal['Precipitação (mm)'].sum()
+
+    def classificar_severidade(rajada, chuva_h, acumulado):
+        # Critérios operacionais adaptados do IPMA
+        if rajada > 110 or chuva_h > 35 or acumulado > 50:
+            return "VERMELHO", "🔴 **ALERTA VERMELHO (RISCO EXTREMO):** Perigo grave para pessoas, bens e estruturas provisórias.", \
+                   "Evitar deslocações. Suspender imediatamente eventos ao ar livre. Garantir desobstrução de sarjetas e valnas (ex: zona ribeirinha e baixa de Óbidos)."
+        elif (91 <= rajada <= 110) or (20 <= chuva_h <= 35) or (30 <= acumulado <= 50):
+            return "LARANJA", "🟠 **AVISO LARANJA (RISCO ELEVADO):** Situação meteorológica severa com potencial de danos.", \
+                   "Atenção a estruturas suspensas, quedas de árvores e pequenas escorrentes rápidas. Reforçar amarração de equipamentos em feiras/eventos."
+        elif (70 <= rajada < 91) or (10 <= chuva_h < 20) or (15 <= acumulado < 30):
+            return "AMARELO", "🟡 **AVISO AMARELO (RISCO MODERADO):** Condições desfavoráveis para atividades específicas.", \
+                   "Monitorizar evolução local. Cuidado na circulação rodoviária devido a piso molhado e visibilidade reduzida."
+        else:
+            return "VERDE", "🟢 **ESTADO NORMAL (SEM ALERTAS ATIVOS):** Condições meteorológicas estáveis na região.", \
+                   "Manter vigilância regular de rotina."
+
+    nivel, titulo_alerta, conselhos = classificar_severidade(max_rajada, max_chuva_hora, acumulado_janela)
+
+    # Caixa de Alerta Operacional no Topo
+    if nivel == "VERMELHO":
+        st.error(titulo_alerta)
+    elif nivel == "LARANJA":
+        st.warning(titulo_alerta)
+    elif nivel == "AMARELO":
+        st.info(titulo_alerta)
+    else:
+        st.success(titulo_alerta)
+
+    # Bloco de Mensagem Pronta para Operacionais / Partilha (Telegram / WhatsApp)
+    with st.expander("📋 **Gerar Mensagem de Alerta Operacional (Pronta a Partilhar)**"):
+        msg_pronta = (
+            f"🚨 *COMUNICADO DE PROTEÇÃO CIVIL / METEO OESTE*\n"
+            f"📍 *Local:* {local_selecionado}\n"
+            f"⚠️ *Estado:* {nivel}\n"
+            f"💨 *Pico de Rajada Previsto:* {max_rajada:.1f} km/h\n"
+            f"🌧️ *Intensidade Máx. Chuva:* {max_chuva_hora:.1f} mm/h\n\n"
+            f"💡 *Recomendações:* {conselhos}"
+        )
+        st.code(msg_pronta, language="markdown")
+        st.caption("Pode copiar este bloco diretamente para grupos de emergência ou comando operacional.")
+
     st.divider()
 
-    # Indicadores Principais (KPIs)
+    # KPIs Operacionais
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Precipitação Acumulada (Total)", f"{df_daily['Precipitação (mm)'].sum():.1f} mm")
-    col2.metric("Temp. Média Período", f"{df_daily['Temperatura Média (°C)'].mean():.1f} °C")
-    col3.metric("Rajada Máxima Prevista", f"{pico_vento_atual:.1f} km/h")
-    col4.metric("Zona Ativa", concelho)
+    col1.metric("Máx. Rajada de Vento", f"{max_rajada:.1f} km/h")
+    col2.metric("Pico Chuva Horária", f"{max_chuva_hora:.1f} mm/h")
+    col3.metric("Chuva Acumulada (Período)", f"{acumulado_janela:.1f} mm")
+    col4.metric("Nível de Alerta", nivel)
 
     st.divider()
 
-    # Gráficos Interativos (Plotly)
-    c_graf1, c_graf2 = st.columns(2)
+    # Gráficos Técnicos de Suporte à Decisão
+    c1, c2 = st.columns(2)
 
-    with c_graf1:
-        st.subheader(f"💧 Acumulado Diário de Chuva ({concelho})")
-        fig_p = px.bar(
-            df_daily, x='Data', y='Precipitação (mm)', 
-            color='Precipitação (mm)', 
-            color_continuous_scale='Blues'
-        )
-        # Linha de corte IPMA para Aviso Amarelo de Chuva (10 mm/h ou acumulados equivalentes)
-        fig_p.add_hline(y=15, line_dash="dash", line_color="orange", annotation_text="Limiar de Referência IPMA", annotation_position="top left")
-        fig_p.update_layout(margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig_p, use_container_width=True)
+    with c1:
+        st.subheader("💨 Perfil de Rajadas de Vento (Nowcast)")
+        fig_v = px.line(df_focal, x='Hora', y='Rajada (km/h)', markers=True)
+        fig_v.add_hline(y=70, line_dash="dash", line_color="orange", annotation_text="Limiar Amarelo (70 km/h)")
+        fig_v.add_hline(y=91, line_dash="dash", line_color="red", annotation_text="Limiar Laranja (91 km/h)")
+        fig_v.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+        st.plotly_chart(fig_v, use_container_width=True)
 
-    with c_graf2:
-        st.subheader("💨 Evolução das Rajadas de Vento (Nowcast Horário)")
-        fig_t = px.line(
-            df_hourly.tail(48), x='Hora', y='Rajada Vento (km/h)', 
-            markers=False
-        )
-        # Linha de corte IPMA para Aviso Amarelo de Vento (70 km/h)
-        fig_t.add_hline(y=70, line_dash="dash", line_color="orange", annotation_text="Limiar Aviso Amarelo IPMA (70 km/h)", annotation_position="top left")
-        fig_t.add_hline(y=91, line_dash="dash", line_color="red", annotation_text="Limiar Aviso Laranja IPMA (91 km/h)", annotation_position="top left")
-        fig_t.update_layout(margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig_t, use_container_width=True)
+    with c2:
+        st.subheader("🌧️ Ritmo Horário de Precipitação")
+        fig_c = px.bar(df_focal, x='Hora', y='Precipitação (mm)', color='Precipitação (mm)', color_continuous_scale='Blues')
+        fig_c.add_hline(y=10, line_dash="dash", line_color="orange", annotation_text="Chuva Intensa (10mm/h)")
+        fig_c.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+        st.plotly_chart(fig_c, use_container_width=True)
 
-    # Mapa Geográfico
-    st.subheader(f"🗺️ Localização Geográfica — {concelho}")
-    df_mapa = pd.DataFrame({'lat': [lat], 'lon': [lon]})
-    st.map(df_mapa, latitude='lat', longitude='lon', zoom=11, size=400)
-
-    # Exportação de Dados
+    # Secção de Radares / Links Úteis de Apoio Operacional em Portugal
     st.divider()
-    csv = df_daily.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Exportar Dados para Relatório (CSV)",
-        data=csv,
-        file_name=f"meteo_ipma_{concelho.lower()}_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv"
-    )
+    st.subheader("🛰️ Fontes de Confirmação Visual Externa (Radar e Satélite)")
+    col_r1, col_r2, col_r3 = st.columns(3)
+    with col_r1:
+        st.markdown("[🔍 **Radar IPMA (Portugal Continental)**](https://www.ipma.pt/en/otempo/obs.radar/)")
+        st.caption("Visualize em tempo real a entrada de ecos de precipitação no litoral oeste.")
+    with col_r2:
+        st.markdown("[🛰️ **EUMETSAT / Sat24 (Europa Ocidental)**](https://en.sat24.com/en/eu/visual)")
+        st.caption("Acompanhamento de massas nubosas e sistemas frontais atlânticos.")
+    with col_r3:
+        st.markdown("[🌊 **Windy (Análise de Vento e Ondas)**](https://www.windy.com/)")
+        st.caption("Modelação avançada de vento em alta resolução para Óbidos e Peniche.")
+
 else:
-    st.error("Não foi possível carregar os dados meteorológicos.")
+    st.error("Erro ao sincronizar dados operacionais com a estação meteorológica.")

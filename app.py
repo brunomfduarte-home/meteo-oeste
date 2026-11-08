@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import re
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
@@ -15,7 +16,24 @@ st.set_page_config(
 )
 
 st.title("🛡️ Serviço Municipal de Proteção Civil de Óbidos - Análise Meteorológica")
-st.markdown("Painel tático de apoio à decisão operacional, monitorização setorial por polígonos e emissão de avisos à população e organizadores.")
+st.markdown("Painel tático de apoio à decisão operacional, monitorização setorial por polígonos, radar em tempo real e emissão de avisos.")
+
+# ==============================================================================
+# FUNÇÃO PARA EXTRAIR COORDENADAS DE LINKS DO GOOGLE MAPS
+# ==============================================================================
+def extrair_coords_google_maps(url_gmaps):
+    if not url_gmaps:
+        return None, None
+    # Padrões comuns de URL do Google Maps: @lat,lon ou ?q=lat,lon ou ll=lat,lon
+    padrao_at = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', url_gmaps)
+    if padrao_at:
+        return float(padrao_at.group(1)), float(padrao_at.group(2))
+    
+    padrao_q = re.search(r'[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)', url_gmaps)
+    if padrao_q:
+        return float(padrao_q.group(1)), float(padrao_q.group(2))
+        
+    return None, None
 
 # ==============================================================================
 # DICIONÁRIOS DE TRADUÇÃO DE DATAS PARA PORTUGUÊS DE PORTUGAL
@@ -72,8 +90,8 @@ setores_obidos = {
             [-9.080, 39.415], [-9.150, 39.415]
         ]
     },
-    "📍 Ponto Específico (GPS Personalizado)": {
-        "lat": 39.3600, "lon": -9.1570,
+    "📍 Ponto Específico (Google Maps / Coordenadas)": {
+        "lat": 39.3607, "lon": -9.1572,
         "perfil": "Coordenadas geográficas personalizadas definidas pelo utilizador.",
         "polygon": []
     }
@@ -82,19 +100,34 @@ setores_obidos = {
 st.sidebar.header("⚙️ Parâmetros de Análise Global")
 setor_selecionado = st.sidebar.selectbox("Selecionar Setor / Vista", list(setores_obidos.keys()))
 
-if setor_selecionado == "📍 Ponto Específico (GPS Personalizado)":
+# Inicialização de coordenadas padrão na sessão
+if 'lat_clicada' not in st.session_state:
+    st.session_state.lat_clicada = 39.3607
+if 'lon_clicada' not in st.session_state:
+    st.session_state.lon_clicada = -9.1572
+
+if setor_selecionado == "📍 Ponto Específico (Google Maps / Coordenadas)":
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📍 Localização Específica (GPS)")
-    lat_custom = st.sidebar.number_input("Latitude", value=39.3607, format="%.4f")
-    lon_custom = st.sidebar.number_input("Longitude", value=-9.1572, format="%.4f")
-    nome_ponto_custom = st.sidebar.text_input("Nome/Ref. do Ponto", value="Recinto / Ponto Específico")
+    st.sidebar.markdown("### 📍 Localização Personalizada")
+    
+    url_gmaps = st.sidebar.text_input("Link do Google Maps (Cole o URL completo):", placeholder="https://www.google.com/maps/@39.3607,-9.1572,15z")
+    lat_ext, lon_ext = extrair_coords_google_maps(url_gmaps)
+    
+    if lat_ext and lon_ext:
+        st.session_state.lat_clicada = lat_ext
+        st.session_state.lon_clicada = lon_ext
+        st.sidebar.success(f"Coordenadas extraídas do link: {lat_ext:.4f}, {lon_ext:.4f}")
+    
+    lat_custom = st.sidebar.number_input("Latitude", value=st.session_state.lat_clicada, format="%.4f")
+    lon_custom = st.sidebar.number_input("Longitude", value=st.session_state.lon_clicada, format="%.4f")
+    nome_ponto_custom = st.sidebar.text_input("Nome/Ref. do Ponto", value="Ponto Específico")
     
     lat_analise = lat_custom
     lon_analise = lon_custom
-    setores_obidos["📍 Ponto Específico (GPS Personalizado)"]["lat"] = lat_custom
-    setores_obidos["📍 Ponto Específico (GPS Personalizado)"]["lon"] = lon_custom
-    setores_obidos["📍 Ponto Específico (GPS Personalizado)"]["perfil"] = f"Análise focada em {nome_ponto_custom} ({lat_custom:.4f}, {lon_custom:.4f})."
-    info_setor = setores_obidos["📍 Ponto Específico (GPS Personalizado)"]
+    setores_obidos["📍 Ponto Específico (Google Maps / Coordenadas)"]["lat"] = lat_custom
+    setores_obidos["📍 Ponto Específico (Google Maps / Coordenadas)"]["lon"] = lon_custom
+    setores_obidos["📍 Ponto Específico (Google Maps / Coordenadas)"]["perfil"] = f"Análise focada em {nome_ponto_custom} ({lat_custom:.4f}, {lon_custom:.4f})."
+    info_setor = setores_obidos["📍 Ponto Específico (Google Maps / Coordenadas)"]
 else:
     info_setor = setores_obidos[setor_selecionado]
     lat_analise = info_setor["lat"]
@@ -125,7 +158,7 @@ def obter_dados_cruzados(lat, lon, past, forecast):
     return pd.DataFrame()
 
 if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
-    sub_chaves = [k for k in setores_obidos.keys() if k not in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (GPS Personalizado)"]]
+    sub_chaves = [k for k in setores_obidos.keys() if k not in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (Google Maps / Coordenadas)"]]
     dfs = []
     for sk in sub_chaves:
         df_sub = obter_dados_cruzados(setores_obidos[sk]["lat"], setores_obidos[sk]["lon"], dias_historico, dias_previsao)
@@ -185,14 +218,14 @@ if not df.empty:
     )
 
     # ==============================================================================
-    # MAPA TÁTICO
+    # MAPA TÁTICO INTERATIVO (COM SUPORTE A SELEÇÃO POR CLIQUE)
     # ==============================================================================
-    st.subheader("🗺️ Mapa Tático de Risco — Concelho de Óbidos & Ponto Selecionado")
-    st.caption("Visualização geográfica das zonas geomorfológicas e marcador de localização de alta precisão.")
+    st.subheader("🗺️ Mapa Tático de Risco — Concelho de Óbidos")
+    st.caption("Pode clicar em qualquer ponto do mapa para selecionar uma localização específica ou visualizar os polígonos setoriais.")
 
     dados_mapa = []
     for nome_s, info_s in setores_obidos.items():
-        if nome_s in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (GPS Personalizado)"]:
+        if nome_s in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (Google Maps / Coordenadas)"]:
             continue
         df_s = obter_dados_cruzados(info_s["lat"], info_s["lon"], 1, 2)
         if not df_s.empty:
@@ -230,7 +263,7 @@ if not df.empty:
     )
 
     dados_ponto = [{
-        "nome": "Ponto de Análise",
+        "nome": "Ponto Selecionado",
         "lat": lat_analise,
         "lon": lon_analise,
         "cor": [0, 102, 255, 255]
@@ -250,7 +283,132 @@ if not df.empty:
         initial_view_state=view_state_obidos,
         tooltip={"text": "Setor: {setor}\nAlerta: {nivel}\nRajada Máx: {rajada} km/h\nChuva Máx: {chuva} mm/h"}
     )
-    st.pydeck_chart(mapa_deck)
+    
+    # Exibição do mapa interativo com captação de eventos de clique
+    evento_mapa = st.pydeck_chart(mapa_deck, on_select="rerun", selection_mode="single-object")
+    
+    if evento_mapa and hasattr(evento_mapa, "selection") and evento_mapa.selection:
+        objetos_selecionados = evento_mapa.selection.get("objects", {})
+        if objetos_selecionados:
+            primeiro_obj = list(objetos_selecionados.values())[0]
+            if primeiro_obj and len(primeiro_obj) > 0:
+                item = primeiro_obj[0]
+                if "lat" in item and "lon" in item:
+                    st.session_state.lat_clicada = item["lat"]
+                    st.session_state.lon_clicada = item["lon"]
+                    st.info(f"📍 Ponto selecionado no mapa: {item['lat']:.4f}, {item['lon']:.4f}")
+
+    st.divider()
+
+    # ==============================================================================
+    # METEOGRAMA INTEGRADO ESTILO SPOTWX (AVANÇADO)
+    # ==============================================================================
+    st.subheader(f"📊 Meteograma Operacional Avançado (Estilo SpotWX) — {setor_selecionado}")
+    st.caption("Evolução temporal multi-painel com sincronização horária direta (ECMWF IFS 0.25°).")
+
+    # Criar Subplots empilhados (Meteograma)
+    fig_spotwx = make_subplots(
+        rows=3, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.06,
+        subplot_titles=(
+            "💨 Vento Sustentado e Rajadas Máximas (km/h)",
+            "🌧️ Intensidade de Precipitação Horária (mm/h)",
+            "🌡️ Temperatura (°C) & Pressão Atmosférica à Superfície (hPa)"
+        )
+    )
+
+    # Painel 1: Vento e Rajada
+    fig_spotwx.add_trace(go.Scatter(
+        x=df['Hora'], y=df['Rajada (km/h)'],
+        name="Rajada (km/h)",
+        line=dict(color='#d62728', width=1.5, dash='dot'),
+        fill='tonexty', fillcolor='rgba(214, 39, 40, 0.1)'
+    ), row=1, col=1)
+
+    fig_spotwx.add_trace(go.Scatter(
+        x=df['Hora'], y=df['Vento (km/h)'],
+        name="Vento (km/h)",
+        line=dict(color='#1f77b4', width=2)
+    ), row=1, col=1)
+
+    fig_spotwx.add_hline(y=70, line_dash="dash", line_color="orange", row=1, col=1, annotation_text="Amarelo (70 km/h)")
+    fig_spotwx.add_hline(y=91, line_dash="dash", line_color="red", row=1, col=1, annotation_text="Laranja (91 km/h)")
+
+    # Painel 2: Precipitação (Barras estilo SpotWX)
+    fig_spotwx.add_trace(go.Bar(
+        x=df['Hora'], y=df['Precipitação (mm)'],
+        name="Precipitação (mm/h)",
+        marker_color='#3399ff',
+        opacity=0.85
+    ), row=2, col=1)
+
+    # Painel 3: Temperatura e Pressão
+    fig_spotwx.add_trace(go.Scatter(
+        x=df['Hora'], y=df['Temperatura (°C)'],
+        name="Temperatura (°C)",
+        line=dict(color='#ff7f0e', width=2)
+    ), row=3, col=1)
+
+    fig_spotwx.add_trace(go.Scatter(
+        x=df['Hora'], y=df['Pressão (hPa)'],
+        name="Pressão (hPa)",
+        line=dict(color='#9467bd', width=2, dash='solid'),
+        yaxis="y4"
+    ), row=3, col=1)
+
+    # Ajuste de layout e temas visuais SpotWX
+    fig_spotwx.update_layout(
+        height=700,
+        margin=dict(l=20, r=20, t=40, b=20),
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        plot_bgcolor="#f8f9fa",
+        paper_bgcolor="#ffffff"
+    )
+
+    fig_spotwx.update_xaxes(
+        dtick="H6",
+        tickformat="%d/%m\n%H:%M",
+        gridcolor="#e9ecef",
+        showgrid=True,
+        row=3, col=1
+    )
+    fig_spotwx.update_yaxes(gridcolor="#e9ecef", showgrid=True)
+
+    st.plotly_chart(fig_spotwx, use_container_width=True)
+    st.divider()
+
+    # ==============================================================================
+    # RADAR E IMAGENS EM TEMPO REAL (WINDY / IPMA / VENTUSKY)
+    # ==============================================================================
+    st.subheader("🌐 Radar e Monitorização em Tempo Real (Nowcasting)")
+    st.caption("Cruzamento de dados de radar ao vivo e deteção de núcleos convectivos severe em aproximação a Óbidos.")
+
+    tab_windy, tab_links = st.tabs(["📡 Radar Windy Ao Vivo (Óbidos)", "🔗 Plataformas Especializadas (SpotWX / Ventusky / IPMA)"])
+
+    with tab_windy:
+        # Widget Iframe do Windy centrado nas coordenadas de Óbidos
+        windy_html = f"""
+        <iframe width="100%" height="450" 
+            src="https://embed.windy.com/embed2.html?lat={lat_analise}&lon={lon_analise}&detailLat={lat_analise}&detailLon={lon_analise}&width=100%&height=450&zoom=10&level=surface&overlay=radar&product=radar&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" 
+            frameborder="0">
+        </iframe>
+        """
+        st.components.v1.html(windy_html, height=470)
+
+    with tab_links:
+        col_l1, col_l2, col_l3 = st.columns(3)
+        with col_l1:
+            url_spotwx = f"https://spotwx.com/products/grib_index.php?model=gfs_pgrb2_0p25_f&lat={lat_analise}&lon={lon_analise}&tz=Europe/Lisbon&label=Obidos"
+            st.markdown(f"### 📊 SpotWX Direct\nConsulte o perfil multi-modelo detalhado para este ponto no SpotWX.\n\n[👉 Abrir no SpotWX]({url_spotwx})")
+        with col_l2:
+            url_ventusky = f"https://www.ventusky.com/?p={lat_analise};{lon_analise};10&l=radar"
+            st.markdown(f"### 🌀 Ventusky Radar\nAcompanhe a refletividade do radar e células de trovoada em tempo real.\n\n[👉 Abrir no Ventusky]({url_ventusky})")
+        with col_l3:
+            url_ipma = "https://www.ipma.pt/pt/otempo/obs.radar/"
+            st.markdown(f"### 📡 Radar IPMA Oficial\nAceda às imagens dos radares de Coruche e Loulé da rede IPMA.\n\n[👉 Abrir Radar IPMA]({url_ipma})")
+
     st.divider()
 
     # ==============================================================================
@@ -337,7 +495,6 @@ if not df.empty:
         else:
             nivel_j, ico_j = "VERDE", "🟢"
 
-        # DESCRITORES QUALITATIVOS DA ATMOSFERA
         if chuva_janela_max == 0 and acum_janela_total == 0:
             desc_chuva_pop = "Sem chuva prevista (tempo seco)."
         elif acum_janela_total < 3.0:
@@ -358,7 +515,6 @@ if not df.empty:
         else:
             desc_vento_pop = "Vento muito forte e severo com risco de queda de ramos e estragos em estruturas."
 
-        # RECOMENDAÇÕES EXCLUSIVAS NO ÂMBITO DA PROTEÇÃO CIVIL (AUTOPROTEÇÃO E PREVENÇÃO)
         if idioma == "Português":
             if nivel_j == "VERMELHO":
                 risco_meteo = "RISCO EXTREMO: Perigo grave para a integridade física de pessoas, bens e estruturas."
@@ -483,30 +639,6 @@ if not df.empty:
     col_p2.metric("Pico Máx. de Precipitação", f"{pico_c:.1f} mm/h", delta=f"Previsto: {hora_pico_chuva_fmt}", delta_color="inverse")
     col_p3.metric("Grau de Confiança", f"{confianca}%", help="Estabilidade dos dados cruzados com estações de referência.")
     col_p4.metric("Acumulado Previsto", f"{df_futuro['Precipitação (mm)'].sum():.1f} mm", delta="Janela Operacional")
-
-    st.divider()
-
-    # ==============================================================================
-    # GRÁFICOS MULTI-PARÂMETRO COM EIXOS TEMPORAIS CLAROS
-    # ==============================================================================
-    st.subheader(f"📈 Análise Avançada — {setor_selecionado}")
-    
-    fig_vento = px.line(df, x='Hora', y=['Vento (km/h)', 'Rajada (km/h)'], markers=False,
-                        color_discrete_map={'Vento (km/h)': '#1f77b4', 'Rajada (km/h)':'#d62728'})
-    fig_vento.add_hline(y=70, line_dash="dash", line_color="orange", annotation_text="Limiar Amarelo (70 km/h)")
-    fig_vento.add_hline(y=91, line_dash="dash", line_color="red", annotation_text="Limiar Laranja (91 km/h)")
-    fig_vento.update_xaxes(dtick="H6", tickformat="%d/%m\n%H:%M", title_text="Data e Hora")
-    fig_vento.update_layout(title="Dinâmica de Vento e Rajadas (km/h)", margin=dict(l=10, r=10, t=30, b=10), height=340)
-    st.plotly_chart(fig_vento, use_container_width=True)
-
-    fig_dupla = make_subplots(specs=[[{"secondary_y": True}]])
-    fig_dupla.add_trace(go.Bar(x=df['Hora'], y=df['Precipitação (mm)'], name="Precipitação (mm/h)", marker_color='cornflowerblue'), secondary_y=False)
-    fig_dupla.add_trace(go.Scatter(x=df['Hora'], y=df['Pressão (hPa)'], name="Pressão (hPa)", line=dict(color='purple', width=2)), secondary_y=True)
-    fig_dupla.update_xaxes(dtick="H6", tickformat="%d/%m\n%H:%M", title_text="Data e Hora")
-    fig_dupla.update_layout(title="Precipitação Horária & Queda de Pressão Atmosférica", margin=dict(l=10, r=10, t=30, b=10), height=340)
-    fig_dupla.update_yaxes(title_text="Precipitação (mm/h)", secondary_y=False)
-    fig_dupla.update_yaxes(title_text="Pressão (hPa)", secondary_y=True)
-    st.plotly_chart(fig_dupla, use_container_width=True)
 
 else:
     st.error("Não foi possível carregar os dados analíticos.")

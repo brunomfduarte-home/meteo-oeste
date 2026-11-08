@@ -8,14 +8,14 @@ import pydeck as pdk
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Zonas de Risco",
+    page_title="Meteo Óbidos — Comando Operacional & Eventos",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel setorial e global com **mapa tático por polígonos territoriais**, avaliação de risco IPMA e picos temporais.")
+st.markdown("Painel tático para monitorização meteorológica, mapeamento territorial por polígonos de risco e emissão de avisos para eventos.")
 
 # ==============================================================================
 # SEGMENTAÇÃO GEOMORFOLÓGICA E POLÍGONOS DOS SETORES DE ÓBIDOS
@@ -63,11 +63,11 @@ dias_historico = st.sidebar.slider("Dias de Calibração (Passado)", min_value=1
 dias_previsao = st.sidebar.slider("Dias de Previsão Operacional", min_value=1, max_value=7, value=3)
 
 # ==============================================================================
-# AQUISIÇÃO DE DADOS (API Open-Meteo)
+# AQUISIÇÃO DE DADOS (API Open-Meteo com ECMWF/GFS priorizado)
 # ==============================================================================
 @st.cache_data(ttl=900)
 def obter_dados_cruzados(lat, lon, past, forecast):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&past_days={past}&forecast_days={forecast}&hourly=precipitation,wind_speed_10m,wind_gusts_10m,temperature_2m,surface_pressure,soil_moisture_7_to_28cm"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&past_days={past}&forecast_days={forecast}&models=ecmwf_ifs025&hourly=precipitation,wind_speed_10m,wind_gusts_10m,temperature_2m,surface_pressure,soil_moisture_7_to_28cm"
     res = requests.get(url)
     if res.status_code == 200:
         data = res.json()
@@ -114,7 +114,7 @@ if not df.empty:
             estabilidade_vento = df_p['Vento (km/h)'].std()
             grau_confianca = max(70, min(95, int(98 - estabilidade_vento * 1.5)))
         else:
-            grau_confianca = 85
+            grau_confianca = 88
             
         return pico_rajada, hora_pico_rajada, pico_chuva, hora_pico_chuva, grau_confianca
 
@@ -131,7 +131,7 @@ if not df.empty:
         nivel, cor_alerta = "VERDE", "success"
 
     # Alerta Principal no Topo
-    mensagem_topo = f"🚨 **ESTADO DE ALERTA: {nivel}** | Vista: {setor_selecionado} | Grau de Confiança: **{confianca}%**"
+    mensagem_topo = f"🚨 **ESTADO DE ALERTA: {nivel}** | Vista: {setor_selecionado} | Grau de Confiança (ECMWF): **{confianca}%**"
     if cor_alerta == "error": st.error(mensagem_topo)
     elif cor_alerta == "warning": st.warning(mensagem_topo)
     elif cor_alerta == "info": st.info(mensagem_topo)
@@ -141,7 +141,7 @@ if not df.empty:
     # MAPA TÁTICO COM POLÍGONOS SETORIAIS COLORIDOS POR AVISO
     # ==============================================================================
     st.subheader("🗺️ Mapa Tático de Risco — Setores do Concelho de Óbidos")
-    st.caption("As áreas territoriais encontram-se coloridas de acordo com o respetivo nível de aviso meteorológico ativo.")
+    st.caption("As áreas territoriais encontram-se preenchidas de acordo com o respetivo nível de aviso meteorológico ativo.")
 
     dados_mapa = []
     for nome_s, info_s in setores_obidos.items():
@@ -152,7 +152,6 @@ if not df.empty:
             r_max = df_s['Rajada (km/h)'].max()
             c_max = df_s['Precipitação (mm)'].max()
             
-            # Cores oficiais correspondentes ao risco (RGBA)
             if r_max > 110 or c_max > 35:
                 niv, cor = "VERMELHO", [255, 0, 0, 160]
             elif r_max > 90 or c_max > 20:
@@ -173,7 +172,6 @@ if not df.empty:
 
     df_mapa_final = pd.DataFrame(dados_mapa)
 
-    # Utilização de PolygonLayer para cobrir todo o setor em vez de pontos
     camada_poligonos = pdk.Layer(
         "PolygonLayer",
         data=df_mapa_final,
@@ -218,6 +216,39 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
+    # MÓDULO DE GERAÇÃO DE MENSAGENS PARA ORGANIZADORES DE EVENTOS
+    # ==============================================================================
+    st.subheader("📢 Gerador de Mensagem de Alerta para Eventos ao Ar Livre")
+    st.markdown("Crie um aviso direto, claro e estruturado para enviar aos organizadores de eventos no concelho.")
+
+    with st.form("form_evento"):
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            nome_evento = st.text_input("Nome do Evento", value="Magusto Tradicional de Óbidos")
+            data_evento_str = st.text_input("Data e Hora do Evento", value="Quarta, 11 de novembro, às 17h00")
+        with col_e2:
+            recomendacao_custom = st.text_area(
+                "Recomendação Operacional Específica", 
+                value="Manter o evento e reservar um espaço coberto. Confirmar a decisão no dia anterior às 14h. Se houver risco de projeção de brasas ou vento forte, não acender fogueira."
+            )
+        
+        gerar_msg = st.form_submit_button("Gerar Mensagem de Aviso")
+
+    if gerar_msg:
+        prob_chuva_estimada = min(95, int(pico_c * 15 + 30)) if pico_c > 0 else 15
+        msg_gerada = (
+            f"🌰 *{nome_evento}* | {data_evento_str}\n\n"
+            f"🌧️ *Precipitação provável:* {prob_chuva_estimada}% de probabilidade na faixa horária crítica. "
+            f"Rajadas de vento previstas até *{pico_r:.0f} km/h*.\n\n"
+            f"👉 *Recomendação de Proteção Civil:* {recomendacao_custom}\n\n"
+            f"_Previsão gerada pelo Centro de Comando Operacional de Óbidos em {datetime.now().strftime('%d de %B')}, sujeita a atualização._"
+        )
+        st.success("Mensagem gerada com sucesso! Pode copiar o bloco abaixo:")
+        st.code(msg_gerada, language="markdown")
+
+    st.divider()
+
+    # ==============================================================================
     # GRÁFICOS MULTI-PARÂMETRO
     # ==============================================================================
     st.subheader(f"📈 Análise Avançada — {setor_selecionado}")
@@ -236,21 +267,6 @@ if not df.empty:
     fig_dupla.update_yaxes(title_text="Precipitação (mm)", secondary_y=False)
     fig_dupla.update_yaxes(title_text="Pressão (hPa)", secondary_y=True)
     st.plotly_chart(fig_dupla, use_container_width=True)
-
-    # ==============================================================================
-    # MINUTA DE COMUNICADO OPERACIONAL
-    # ==============================================================================
-    with st.expander("📋 Gerar Comunicado Técnico de Alerta Operacional"):
-        minuta = (
-            f"🚨 **BOLETIM TÉCNICO DE ALERTA — MUNICÍPIO DE ÓBIDOS**\n"
-            f"📍 **Âmbito:** {setor_selecionado}\n"
-            f"🎯 **Nível de Risco:** {nivel} (Confiança: {confianca}%)\n\n"
-            f"⏱️ **Picos Temporais Críticos:**\n"
-            f"- *Rajada Máxima:* {pico_r:.1f} km/h (Previsto para {hora_pico_rajada_fmt})\n"
-            f"- *Intensidade Máxima de Chuva:* {pico_c:.1f} mm/h (Previsto para {hora_pico_chuva_fmt})\n\n"
-            f"💡 **Recomendação Operacional:** Monitorizar infraestruturas no concelho de acordo com o mapa tático setorial."
-        )
-        st.code(minuta, language="markdown")
 
 else:
     st.error("Não foi possível carregar os dados analíticos.")

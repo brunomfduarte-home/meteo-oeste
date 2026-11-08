@@ -239,11 +239,11 @@ if not df.empty:
     )
 
     # ==============================================================================
-    # CARTÕES DE DESTAQUE COM VALORES GRANDES E INTERVALOS DE PICO RIGOROSOS
+    # RESUMO EXECUTIVO & TABELA DE REFERÊNCIA IPMA AO LADO
     # ==============================================================================
-    st.subheader("📌 Resumo Executivo & Períodos de Pico Crítico")
+    st.subheader("📌 Resumo Executivo, Períodos de Pico & Limiares IPMA")
     
-    col_c1, col_c2, col_c3 = st.columns(3)
+    col_c1, col_c2, col_tabela = st.columns([1.2, 1.2, 1.6])
     
     h_ini_c = hora_c - timedelta(hours=1)
     h_fim_c = hora_c + timedelta(hours=1)
@@ -256,10 +256,10 @@ if not df.empty:
     with col_c1:
         st.markdown(
             f"""
-            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 6px solid #3399ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 14px; font-weight: bold; color: #555;">🌧️ PRECIPITAÇÃO MÁXIMA</div>
-                <div style="font-size: 32px; font-weight: 800; color: #1f77b4; margin: 8px 0;">{pico_c:.1f} <span style="font-size: 16px; font-weight: normal;">mm/h</span></div>
-                <div style="font-size: 13px; color: #333;">🕒 <b>Período do Pico:</b><br>{intervalo_chuva_str}</div>
+            <div style="background-color: #f8f9fa; padding: 16px; border-radius: 10px; border-left: 6px solid #3399ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 13px; font-weight: bold; color: #555;">🌧️ PRECIPITAÇÃO MÁXIMA</div>
+                <div style="font-size: 28px; font-weight: 800; color: #1f77b4; margin: 6px 0;">{pico_c:.1f} <span style="font-size: 14px; font-weight: normal;">mm/h</span></div>
+                <div style="font-size: 12px; color: #333;">🕒 <b>Pico:</b><br>{intervalo_chuva_str}</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -267,22 +267,24 @@ if not df.empty:
     with col_c2:
         st.markdown(
             f"""
-            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 6px solid #d62728; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 14px; font-weight: bold; color: #555;">💨 RAJADA MÁXIMA & DIREÇÃO</div>
-                <div style="font-size: 32px; font-weight: 800; color: #d62728; margin: 8px 0;">{pico_r:.1f} <span style="font-size: 16px; font-weight: normal;">km/h</span> <span style="font-size: 24px;">{seta_vento_str}</span></div>
-                <div style="font-size: 13px; color: #333;">🕒 <b>Período do Pico ({cardeal_vento_str}):</b><br>{intervalo_vento_str}</div>
+            <div style="background-color: #f8f9fa; padding: 16px; border-radius: 10px; border-left: 6px solid #d62728; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 13px; font-weight: bold; color: #555;">💨 RAJADA MÁXIMA & DIREÇÃO</div>
+                <div style="font-size: 28px; font-weight: 800; color: #d62728; margin: 6px 0;">{pico_r:.1f} <span style="font-size: 14px; font-weight: normal;">km/h</span> <span style="font-size: 20px;">{seta_vento_str}</span></div>
+                <div style="font-size: 12px; color: #333;">🕒 <b>Pico ({cardeal_vento_str}):</b><br>{intervalo_vento_str}</div>
             </div>
             """,
             unsafe_allow_html=True
         )
-    with col_c3:
-        temp_atual = df_futuro['Temperatura (°C)'].mean() if not df_futuro.empty else 15.0
+    with col_tabela:
         st.markdown(
-            f"""
-            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 6px solid #ff7f0e; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 14px; font-weight: bold; color: #555;">🌡️ TEMPERATURA MÉDIA</div>
-                <div style="font-size: 32px; font-weight: 800; color: #ff7f0e; margin: 8px 0;">{temp_atual:.1f} <span style="font-size: 16px; font-weight: normal;">°C</span></div>
-                <div style="font-size: 13px; color: #333;">📊 <b>Estabilidade Térmica Operacional</b></div>
+            """
+            <div style="background-color: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #e0e0e0; font-size: 12px;">
+                <b>📋 Critérios de Aviso IPMA (Referência):</b>
+                <table style="width:100%; margin-top:6px; font-size:11px; border-collapse: collapse;">
+                  <tr style="background:#eef2f5;"><th style="text-align:left; padding:3px;">Parâmetro</th><th style="padding:3px;">🟡 Amarelo</th><th style="padding:3px;">🟠 Laranja</th><th style="padding:3px;">🔴 Vermelho</th></tr>
+                  <tr><td><b>Rajadas Vento</b></td><td>70 - 90 km/h</td><td>90 - 110 km/h</td><td>> 110 km/h</td></tr>
+                  <tr><td><b>Precipitação</b></td><td>10 - 20 mm/h</td><td>20 - 35 mm/h</td><td>> 35 mm/h</td></tr>
+                </table>
             </div>
             """,
             unsafe_allow_html=True
@@ -373,78 +375,85 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # METEOGRAMA INTEGRADO COM LIMIARES (AMARELO, LARANJA, VERMELHO), SETAS E DATAS/HORAS VISÍVEIS
+    # METEOGRAMAS AMPLIADOS, COM LIMIARES CONTEXTUAIS E SETAS DE VENTO
     # ==============================================================================
-    st.subheader(f"📊 Meteograma Operacional Avançado (Com Limiares de Aviso e Direção de Vento) — {setor_selecionado}")
-    st.caption("Evolução multi-painel com linhas de limiar IPMA (Amarelo, Laranja, Vermelho), setas de direção de vento e marcação horária/diária fixa.")
+    st.subheader(f"📊 Meteogramas Operacionais Ampliados (Valores e Limiares Claros) — {setor_selecionado}")
+    st.caption("Gráficos de alta resolução com escala generosa, setas de direção de vento, valores destacados e limiares contextuais.")
 
     fig_spotwx = make_subplots(
         rows=4, cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.04,
+        vertical_spacing=0.06,
         subplot_titles=(
-            "💨 Vento Sustentado, Rajadas Máximas (km/h) & Direção",
+            "💨 Vento Sustentado e Rajadas Máximas (km/h) com Direção",
             "🌧️ Intensidade de Precipitação Horária (mm/h)",
             "🌡️ Temperatura do Ar (°C)",
             "📉 Pressão Atmosférica à Superfície (hPa)"
         )
     )
 
-    # Painel 1: Vento e Rajada com Linhas de Limiar IPMA
+    # Painel 1: Vento
     fig_spotwx.add_trace(go.Scatter(
         x=df['Hora'], y=df['Rajada (km/h)'],
         name="Rajada (km/h)",
-        line=dict(color='#d62728', width=1.5, dash='dot'),
+        line=dict(color='#d62728', width=2, dash='dot'),
         fill='tonexty', fillcolor='rgba(214, 39, 40, 0.1)'
     ), row=1, col=1)
 
     fig_spotwx.add_trace(go.Scatter(
         x=df['Hora'], y=df['Vento (km/h)'],
         name="Vento Sustentado (km/h)",
-        line=dict(color='#1f77b4', width=2)
+        line=dict(color='#1f77b4', width=2.5)
     ), row=1, col=1)
 
-    df_setas = df.iloc[::6]
+    # Setas de direção e valores de rajadas nos picos
+    df_setas = df.iloc[::4] # a cada 4 horas
     for _, row in df_setas.iterrows():
         seta_txt = deg_para_seta(row['Direção Vento (°)']).split()[0]
+        val_raj = row['Rajada (km/h)']
         fig_spotwx.add_annotation(
-            x=row['Hora'], y=row['Rajada (km/h)'] + 5,
-            text=seta_txt,
+            x=row['Hora'], y=val_raj + 8,
+            text=f"{seta_txt} {val_raj:.0f}",
             showarrow=False,
-            font=dict(size=10, color="#333"),
+            font=dict(size=9, color="#444"),
             row=1, col=1
         )
 
-    fig_spotwx.add_hline(y=70, line_dash="dash", line_color="#ffcc00", row=1, col=1, annotation_text="Limiar Amarelo (70 km/h)", annotation_position="top left")
-    fig_spotwx.add_hline(y=90, line_dash="dash", line_color="#ff6600", row=1, col=1, annotation_text="Limiar Laranja (90 km/h)", annotation_position="top left")
-    fig_spotwx.add_hline(y=110, line_dash="dash", line_color="#ff0000", row=1, col=1, annotation_text="Limiar Vermelho (110 km/h)", annotation_position="top left")
+    # Limiares de aviso de vento só aparecem se a rajada máxima prevista ultrapassar 60 km/h
+    if pico_r >= 60:
+        fig_spotwx.add_hline(y=70, line_dash="dash", line_color="#ffcc00", row=1, col=1, annotation_text="Limiar Amarelo (70 km/h)")
+        fig_spotwx.add_hline(y=90, line_dash="dash", line_color="#ff6600", row=1, col=1, annotation_text="Limiar Laranja (90 km/h)")
+        fig_spotwx.add_hline(y=110, line_dash="dash", line_color="#ff0000", row=1, col=1, annotation_text="Limiar Vermelho (110 km/h)")
 
-    # Painel 2: Precipitação
+    # Painel 2: Precipitação (barras maiores e legíveis)
     fig_spotwx.add_trace(go.Bar(
         x=df['Hora'], y=df['Precipitação (mm)'],
         name="Precipitação (mm/h)",
-        marker_color='#3399ff',
-        opacity=0.85
+        marker_color='#1f77b4',
+        opacity=0.9
     ), row=2, col=1)
 
-    fig_spotwx.add_hline(y=10, line_dash="dash", line_color="#ffcc00", row=2, col=1, annotation_text="Amarelo (10 mm/h)")
-    fig_spotwx.add_hline(y=20, line_dash="dash", line_color="#ff6600", row=2, col=1, annotation_text="Laranja (20 mm/h)")
-    fig_spotwx.add_hline(y=35, line_dash="dash", line_color="#ff0000", row=2, col=1, annotation_text="Vermelho (35 mm/h)")
+    # Limiares de chuva só aparecem se o pico ultrapassar 8 mm/h
+    if pico_c >= 8:
+        fig_spotwx.add_hline(y=10, line_dash="dash", line_color="#ffcc00", row=2, col=1, annotation_text="Amarelo (10 mm/h)")
+        fig_spotwx.add_hline(y=20, line_dash="dash", line_color="#ff6600", row=2, col=1, annotation_text="Laranja (20 mm/h)")
+        fig_spotwx.add_hline(y=35, line_dash="dash", line_color="#ff0000", row=2, col=1, annotation_text="Vermelho (35 mm/h)")
 
     # Painel 3: Temperatura
     fig_spotwx.add_trace(go.Scatter(
         x=df['Hora'], y=df['Temperatura (°C)'],
         name="Temperatura (°C)",
-        line=dict(color='#ff7f0e', width=2)
+        line=dict(color='#ff7f0e', width=2.5)
     ), row=3, col=1)
 
     # Painel 4: Pressão
     fig_spotwx.add_trace(go.Scatter(
         x=df['Hora'], y=df['Pressão (hPa)'],
         name="Pressão (hPa)",
-        line=dict(color='#9467bd', width=2)
+        line=dict(color='#9467bd', width=2.5)
     ), row=4, col=1)
 
+    # Linhas verticais de dias
     datas_unicas = pd.to_datetime(df['Hora'].dt.date).unique()
     for d in datas_unicas:
         dt_meia_noite = pd.to_datetime(d)
@@ -452,30 +461,31 @@ if not df.empty:
             fig_spotwx.add_vline(
                 x=dt_meia_noite, 
                 line_dash="solid", 
-                line_color="rgba(100, 100, 100, 0.4)", 
+                line_color="rgba(100, 100, 100, 0.35)", 
                 line_width=1.5,
                 row=r, col=1
             )
 
+    # Altura ampliada (1100px) para máxima legibilidade
     fig_spotwx.update_layout(
-        height=850,
-        margin=dict(l=20, r=20, t=40, b=40),
+        height=1100,
+        margin=dict(l=30, r=20, t=50, b=50),
         hovermode="x unified",
         showlegend=False,
-        plot_bgcolor="#f8f9fa",
+        plot_bgcolor="#ffffff",
         paper_bgcolor="#ffffff"
     )
 
     fig_spotwx.update_xaxes(
         dtick=86400000.0 * 0.5,
         tickformat="%d/%m\n%H:%M",
-        gridcolor="#e9ecef",
+        gridcolor="#e5e8eb",
         showgrid=True,
-        tickfont=dict(size=11, color="#111", family="Arial"),
+        tickfont=dict(size=12, color="#111", family="Arial"),
         showticklabels=True,
         row=4, col=1
     )
-    fig_spotwx.update_yaxes(gridcolor="#e9ecef", showgrid=True)
+    fig_spotwx.update_yaxes(gridcolor="#e5e8eb", showgrid=True)
 
     st.plotly_chart(fig_spotwx, use_container_width=True)
     st.divider()

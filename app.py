@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import re
+import numpy as np
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
@@ -19,7 +20,7 @@ st.title("🛡️ Serviço Municipal de Proteção Civil de Óbidos - Análise M
 st.markdown("Painel tático de apoio à decisão operacional, monitorização setorial por polígonos, radar em tempo real e emissão de avisos.")
 
 # ==============================================================================
-# FUNÇÃO PARA EXTRAIR COORDENADAS DE LINKS DO GOOGLE MAPS
+# FUNÇÕES AUXILIARES (GOOGLE MAPS E DIREÇÃO DO VENTO)
 # ==============================================================================
 def extrair_coords_google_maps(url_gmaps):
     if not url_gmaps:
@@ -33,6 +34,28 @@ def extrair_coords_google_maps(url_gmaps):
         return float(padrao_q.group(1)), float(padrao_q.group(2))
         
     return None, None
+
+def deg_para_direcao(deg):
+    if pd.isna(deg):
+        return "N/D"
+    direcoes = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    val = int((deg / 22.5) + 0.5)
+    return direcoes[(val % 16)]
+
+# Seta indicadora baseada na direção
+def deg_para_seta(deg):
+    if pd.isna(deg):
+        return "⬆️"
+    # Mapeamento simples de setas aproximadas
+    if 337.5 <= deg <= 360 or 0 <= deg < 22.5: return "⬇️ (N)"
+    elif 22.5 <= deg < 67.5: return "↙️ (NE)"
+    elif 67.5 <= deg < 112.5: return "⬅️ (E)"
+    elif 112.5 <= deg < 157.5: return "↖️ (SE)"
+    elif 157.5 <= deg < 202.5: return "⬆️ (S)"
+    elif 202.5 <= deg < 247.5: return "↗️ (SW)"
+    elif 247.5 <= deg < 292.5: return "➡️ (W)"
+    elif 292.5 <= deg < 337.5: return "↘️ (NW)"
+    return "⬆️"
 
 # ==============================================================================
 # DICIONÁRIOS DE TRADUÇÃO DE DATAS PARA PORTUGUÊS DE PORTUGAL
@@ -131,7 +154,7 @@ else:
     lat_analise = info_setor["lat"]
     lon_analise = info_setor["lon"]
 
-dias_historico = st.sidebar.slider("Dias de Calibração (Passado)", min_value=1, max_value=5, value=3)
+dias_historico = st.sidebar.slider("Dias de Calibração (Passado)", min_value=1, max_value=5, value=2)
 dias_previsao = st.sidebar.slider("Dias de Previsão Operacional", min_value=1, max_value=7, value=5)
 
 # ==============================================================================
@@ -139,7 +162,7 @@ dias_previsao = st.sidebar.slider("Dias de Previsão Operacional", min_value=1, 
 # ==============================================================================
 @st.cache_data(ttl=900)
 def obter_dados_cruzados(lat, lon, past, forecast):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&past_days={past}&forecast_days={forecast}&models=ecmwf_ifs025&hourly=precipitation,wind_speed_10m,wind_gusts_10m,temperature_2m,surface_pressure,soil_moisture_7_to_28cm"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&past_days={past}&forecast_days={forecast}&models=ecmwf_ifs025&hourly=precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,surface_pressure"
     res = requests.get(url)
     if res.status_code == 200:
         data = res.json()
@@ -148,9 +171,9 @@ def obter_dados_cruzados(lat, lon, past, forecast):
             'Precipitação (mm)': data['hourly']['precipitation'],
             'Vento (km/h)': data['hourly']['wind_speed_10m'],
             'Rajada (km/h)': data['hourly']['wind_gusts_10m'],
+            'Direção Vento (°)': data['hourly']['wind_direction_10m'],
             'Temperatura (°C)': data['hourly']['temperature_2m'],
-            'Pressão (hPa)': data['hourly']['surface_pressure'],
-            'Humidade Solo (%)': [v * 100 for v in data['hourly']['soil_moisture_7_to_28cm']]
+            'Pressão (hPa)': data['hourly']['surface_pressure']
         })
         return df
     return pd.DataFrame()
@@ -176,10 +199,13 @@ if not df.empty:
 
     def calcular_confianca_e_picos(df_f, df_p):
         pico_rajada = df_f['Rajada (km/h)'].max() if not df_f.empty else 0
-        hora_pico_rajada = df_f.loc[df_f['Rajada (km/h)'].idxmax()]['Hora'] if not df_f.empty else agora
+        idx_r = df_f['Rajada (km/h)'].idxmax() if not df_f.empty else 0
+        hora_pico_rajada = df_f.loc[idx_r]['Hora'] if not df_f.empty else agora
+        dir_pico_rajada = df_f.loc[idx_r]['Direção Vento (°)'] if not df_f.empty else 0
         
         pico_chuva = df_f['Precipitação (mm)'].max() if not df_f.empty else 0
-        hora_pico_chuva = df_f.loc[df_f['Precipitação (mm)'].idxmax()]['Hora'] if not df_f.empty else agora
+        idx_c = df_f['Precipitação (mm)'].idxmax() if not df_f.empty else 0
+        hora_pico_chuva = df_f.loc[idx_c]['Hora'] if not df_f.empty else agora
         
         if not df_p.empty and len(df_p) > 10:
             estabilidade_vento = df_p['Vento (km/h)'].std()
@@ -187,9 +213,11 @@ if not df.empty:
         else:
             grau_confianca = 88
             
-        return pico_rajada, hora_pico_rajada, pico_chuva, hora_pico_chuva, grau_confianca
+        return pico_rajada, hora_pico_rajada, dir_pico_rajada, pico_chuva, hora_pico_chuva, grau_confianca
 
-    pico_r, hora_r, pico_c, hora_c, confianca = calcular_confianca_e_picos(df_futuro, df_passado)
+    pico_r, hora_r, dir_r, pico_c, hora_c, confianca = calcular_confianca_e_picos(df_futuro, df_passado)
+    seta_vento_str = deg_para_seta(dir_r)
+    cardeal_vento_str = deg_para_direcao(dir_r)
 
     if pico_r > 110 or pico_c > 35:
         nivel, icone_ipma, cor_hex = "VERMELHO", "🔴", "#FF0000"
@@ -216,7 +244,7 @@ if not df.empty:
     )
 
     # ==============================================================================
-    # CARTÕES DE DESTAQUE DE PERÍODO CRÍTICO (ESTILO SMPC)
+    # CARTÕES DE DESTAQUE COM VALORES GRANDES E SETA DE VENTO (ESTILO SMPC DINÂMICO)
     # ==============================================================================
     st.subheader("📌 Resumo Executivo & Períodos de Pico Crítico")
     
@@ -225,10 +253,10 @@ if not df.empty:
     with col_c1:
         st.markdown(
             f"""
-            <div style="background-color: #f1f3f5; padding: 15px; border-radius: 8px; border-left: 5px solid #3399ff;">
-                <h4>🌧️ Precipitação</h4>
-                <p><b>Máx:</b> {pico_c:.1f} mm/h</p>
-                <p>🕒 <b>Período do Pico:</b><br>{hora_c.strftime('%d/%m às %H:%M')}</p>
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 6px solid #3399ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 14px; font-weight: bold; color: #555;">🌧️ PRECIPITAÇÃO MÁXIMA</div>
+                <div style="font-size: 32px; font-weight: 800; color: #1f77b4; margin: 8px 0;">{pico_c:.1f} <span style="font-size: 16px; font-weight: normal;">mm/h</span></div>
+                <div style="font-size: 13px; color: #333;">🕒 <b>Pico Previsto:</b><br>{hora_c.strftime('%d/%m às %H:%M')}</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -236,10 +264,10 @@ if not df.empty:
     with col_c2:
         st.markdown(
             f"""
-            <div style="background-color: #f1f3f5; padding: 15px; border-radius: 8px; border-left: 5px solid #d62728;">
-                <h4>💨 Rajadas de Vento</h4>
-                <p><b>Máx:</b> {pico_r:.1f} km/h</p>
-                <p>🕒 <b>Período do Pico:</b><br>{hora_r.strftime('%d/%m às %H:%M')}</p>
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 6px solid #d62728; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 14px; font-weight: bold; color: #555;">💨 RAJADA MÁXIMA & DIREÇÃO</div>
+                <div style="font-size: 32px; font-weight: 800; color: #d62728; margin: 8px 0;">{pico_r:.1f} <span style="font-size: 16px; font-weight: normal;">km/h</span> <span style="font-size: 24px;" title="Direção: {cardeal_vento_str}">{seta_vento_str}</span></div>
+                <div style="font-size: 13px; color: #333;">🕒 <b>Pico Previsto ({cardeal_vento_str}):</b><br>{hora_r.strftime('%d/%m às %H:%M')}</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -248,10 +276,10 @@ if not df.empty:
         temp_atual = df_futuro['Temperatura (°C)'].mean() if not df_futuro.empty else 15.0
         st.markdown(
             f"""
-            <div style="background-color: #f1f3f5; padding: 15px; border-radius: 8px; border-left: 5px solid #ff7f0e;">
-                <h4>🌡️ Temperatura Média</h4>
-                <p><b>Média Prevista:</b> {temp_atual:.1f} °C</p>
-                <p>📊 <b>Estabilidade Térmica</b></p>
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 6px solid #ff7f0e; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 14px; font-weight: bold; color: #555;">🌡️ TEMPERATURA MÉDIA</div>
+                <div style="font-size: 32px; font-weight: 800; color: #ff7f0e; margin: 8px 0;">{temp_atual:.1f} <span style="font-size: 16px; font-weight: normal;">°C</span></div>
+                <div style="font-size: 13px; color: #333;">📊 <b>Estabilidade Térmica Operacional</b></div>
             </div>
             """,
             unsafe_allow_html=True
@@ -342,12 +370,11 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # METEOGRAMA INTEGRADO PROFISSIONAL (CORRIGIDO E SEPARADO POR PAINÉIS)
+    # METEOGRAMA INTEGRADO COM LINHAS VERTICAIS DE DIAS E HORAS
     # ==============================================================================
-    st.subheader(f"📊 Meteograma Operacional Avançado (Estilo SpotWX) — {setor_selecionado}")
-    st.caption("Evolução temporal multi-painel corrigida: eixos isolados por parâmetro para leitura limpa e rigorosa.")
+    st.subheader(f"📊 Meteograma Operacional Avançado (Com Divisão de Dias e Horas) — {setor_selecionado}")
+    st.caption("Evolução multi-painel com linhas verticais a delimitar os dias e marcação horária exata.")
 
-    # Criar Subplots com 4 painéis independentes para evitar sobreposições
     fig_spotwx = make_subplots(
         rows=4, cols=1,
         shared_xaxes=True,
@@ -385,19 +412,32 @@ if not df.empty:
         opacity=0.85
     ), row=2, col=1)
 
-    # Painel 3: Temperatura (Isolada)
+    # Painel 3: Temperatura
     fig_spotwx.add_trace(go.Scatter(
         x=df['Hora'], y=df['Temperatura (°C)'],
         name="Temperatura (°C)",
         line=dict(color='#ff7f0e', width=2)
     ), row=3, col=1)
 
-    # Painel 4: Pressão (Isolada)
+    # Painel 4: Pressão
     fig_spotwx.add_trace(go.Scatter(
         x=df['Hora'], y=df['Pressão (hPa)'],
         name="Pressão (hPa)",
         line=dict(color='#9467bd', width=2)
     ), row=4, col=1)
+
+    # Adicionar linhas verticais para delimitar os dias (às 00:00 de cada dia)
+    datas_unicas = pd.to_datetime(df['Hora'].dt.date).unique()
+    for d in datas_unicas:
+        dt_meia_noite = pd.to_datetime(d)
+        for r in range(1, 5):
+            fig_spotwx.add_vline(
+                x=dt_meia_noite, 
+                line_dash="solid", 
+                line_color="rgba(100, 100, 100, 0.3)", 
+                line_width=1.5,
+                row=r, col=1
+            )
 
     fig_spotwx.update_layout(
         height=850,
@@ -452,36 +492,25 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # MÓDULO DE GESTÃO DE AVISOS E EVENTOS (PADRÃO PROTEÇÃO CIVIL)
+    # MÓDULO DE GESTÃO DE AVISOS E EVENTOS (BASEADO NO MOMENTO DA CONSULTA E HORIZONTE DE 6H A 36H)
     # ==============================================================================
-    st.subheader("📢 Central de Avisos & Recomendações (Padrão UNDRR)")
-    st.markdown("Defina a **data/hora de início e fim** para gerar alertas operacionais e medidas de autoproteção e prevenção.")
+    st.subheader("📢 Central de Alertas Operacionais & Notificações à População")
+    st.markdown("Selecione o horizonte temporal imediato para verificar se deve ser emitido aviso devido a ocorrências previstas a breve prazo.")
 
     idioma = st.radio("Idioma do Comunicado / Language", ["Português", "English"], horizontal=True)
 
     with st.container():
-        st.markdown("#### 📅 Janela de Evento / Monitorização (Início e Fim)")
-        col_i1, col_i2 = st.columns(2)
-        with col_i1:
-            data_inicio = st.date_input("Data de Início / Start Date", value=datetime.today().date() + timedelta(days=1))
-            hora_inicio = st.time_input("Hora de Início / Start Time", value=time(17, 0))
-        with col_i2:
-            data_fim = st.date_input("Data de Fim / End Date", value=data_inicio)
-            hora_fim = st.time_input("Hora de Fim / End Time", value=time(21, 0))
+        st.markdown("#### ⏱️ Horizonte Temporal de Análise Preventiva")
+        horizonte_horas = st.selectbox(
+            "Selecionar janela de alerta imediato (a partir do momento atual):",
+            [6, 12, 24, 36],
+            format_func=lambda x: f"Próximas {x} horas (Até {(agora + timedelta(hours=x)).strftime('%d/%m às %H:%M')})"
+        )
 
-        dt_inicio = datetime.combine(data_inicio, hora_inicio)
-        dt_fim = datetime.combine(data_fim, hora_fim)
+        dt_inicio_aviso = agora
+        dt_fim_aviso = agora + timedelta(hours=horizonte_horas)
 
-        if dt_fim <= dt_inicio:
-            st.warning("⚠️ A data/hora de fim deve ser posterior à data/hora de início.")
-            dt_fim = dt_inicio + timedelta(hours=4)
-        
-        diferenca_horas = (dt_fim - dt_inicio).total_seconds() / 3600
-        if diferenca_horas > 72:
-            st.info("ℹ️ A janela selecionada foi ajustada para o limite máximo de 3 dias (72h).")
-            dt_fim = dt_inicio + timedelta(hours=72)
-
-        df_janela = df[(df['Hora'] >= dt_inicio) & (df['Hora'] <= dt_fim)]
+        df_janela = df[(df['Hora'] >= dt_inicio_aviso) & (df['Hora'] <= dt_fim_aviso)]
 
         if not df_janela.empty:
             chuva_janela_max = df_janela['Precipitação (mm)'].max()
@@ -498,22 +527,22 @@ if not df.empty:
             picos_texto_en = ""
 
             if tem_pico_critico:
-                picos_texto_pt += "\n⏱️ *JANELAS DE PICO A ATENTAR:*"
-                picos_texto_en += "\n⏱️ *CRITICAL PEAK WINDOWS:*"
+                picos_texto_pt += "\n⏱️ *JANELAS DE PICO A ATENTAR NESTE PERÍODO:*"
+                picos_texto_en += "\n⏱️ *CRITICAL PEAK WINDOWS IN THIS TIMEFRAME:*"
 
                 if not df_picos_vento.empty:
-                    h_v_ini = df_picos_vento['Hora'].min().strftime('%d/%m às %H:%M')
+                    h_v_ini = df_picos_vento['Hora'].min().strftime('%H:%M')
                     h_v_fim = df_picos_vento['Hora'].max().strftime('%H:%M')
                     v_val = df_picos_vento['Rajada (km/h)'].max()
-                    picos_texto_pt += f"\n  • 💨 *Pico de Vento / Rajada Intensa:* de {v_val:.0f} km/h entre {h_v_ini}h e {h_v_fim}h."
-                    picos_texto_en += f"\n  • 💨 *Severe Wind Peak:* gusts up to {v_val:.0f} km/h between {h_v_ini}h and {h_v_fim}h."
+                    picos_texto_pt += f"\n  • 💨 *Pico de Vento / Rajada Intensa:* de {v_val:.0f} km/h previsto entre as {h_v_ini}h e as {h_v_fim}h."
+                    picos_texto_en += f"\n  • 💨 *Severe Wind Peak:* gusts up to {v_val:.0f} km/h expected between {h_v_ini} and {h_v_fim}."
 
                 if not df_picos_chuva.empty:
-                    h_c_ini = df_picos_chuva['Hora'].min().strftime('%d/%m às %H:%M')
+                    h_c_ini = df_picos_chuva['Hora'].min().strftime('%H:%M')
                     h_c_fim = df_picos_chuva['Hora'].max().strftime('%H:%M')
                     c_val = df_picos_chuva['Precipitação (mm)'].max()
-                    picos_texto_pt += f"\n  • 🌧️ *Pico de Precipitação:* de {c_val:.1f} mm/h entre {h_c_ini}h e {h_c_fim}h."
-                    picos_texto_en += f"\n  • 🌧️ *Rainfall Peak:* rate of {c_val:.1f} mm/h between {h_c_ini}h and {h_c_fim}h."
+                    picos_texto_pt += f"\n  • 🌧️ *Pico de Precipitação:* de {c_val:.1f} mm/h previsto entre as {h_c_ini}h e as {h_c_fim}h."
+                    picos_texto_en += f"\n  • 🌧️ *Rainfall Peak:* rate of {c_val:.1f} mm/h expected between {h_c_ini} and {h_c_fim}."
         else:
             chuva_janela_max, acum_janela_total, vento_janela_max, temp_janela_media = 0.0, 0.0, 20.0, 15.0
             tem_pico_critico = False
@@ -555,111 +584,114 @@ if not df.empty:
         else:
             desc_vento_pop = "Vento muito forte e severo com risco de queda de ramos e estragos em estruturas."
 
+        # Sugestão de emissão de aviso com base no horizonte temporal
+        sugestao_emissao = ""
+        if nivel_j in ["AMARELO", "LARANJA", "VERMELHO"]:
+            sugestao_emissao = f"⚠️ **RECOMENDAÇÃO OPERACIONAL:** Sugere-se a emissão imediata de aviso à população / entidades para as próximas {horizonte_horas}h devido a condições meteorológicas adversas previstas."
+        else:
+            sugestao_emissao = f"ℹ️ **ESTADO NORMAL:** Sem necessidade de emissão de aviso extraordinário para as próximas {horizonte_horas}h."
+
         if idioma == "Português":
             if nivel_j == "VERMELHO":
-                risco_meteo = "RISCO EXTREMO: Perigo grave para a integridade física de pessoas, bens e estruturas."
-                rec_pop = "• Evite deslocações não essenciais durante o período crítico.\n• Afaste-se de zonas arborizadas, arribas e estruturas temporárias ou desprotegidas.\n• Não tente atravessar passagens molhadas, linhas de água ou áreas inundadas.\n• Siga escrupulosamente as orientações das autoridades de Proteção Civil e Forças de Segurança."
-                rec_org = "• Suspenda ou adie as atividades programadas ao ar livre.\n• Garanta o desmonte ou o reforço preventivo de estruturas amovíveis (tendas, palcos, painéis e sinalética).\n• Ative o plano de contingência e comunique antecipadamente a suspensão ao público."
+                risco_meteo = f"RISCO EXTREMO IMINENTE: Perigo grave previsto para as próximas {horizonte_horas}h."
+                rec_pop = "• Evite deslocações não essenciais durante o período crítico.\n• Afaste-se de zonas arborizadas, arribas e estruturas temporárias ou desprotegidas.\n• Siga escrupulosamente as orientações das autoridades de Proteção Civil."
+                rec_org = "• Suspenda ou adie as atividades programadas ao ar livre.\n• Garanta o reforço preventivo ou desmonte de estruturas amovíveis."
             elif nivel_j == "LARANJA":
-                risco_meteo = "RISCO ELEVADO: Potencial de danos em estruturas, queda de ramos/árvores e inundações urbanas."
-                rec_pop = "• Adote uma condução defensiva, reduzindo a velocidade e aumentando a distância de segurança.\n• Evite a circulação e permanência junto a zonas arborizadas ou estruturas sujeitas à ação do vento.\n• Esteja atento à acumulação de água na via pública e desobstrua sistemas de escoamento privados."
-                rec_org = "• Reforce preventivamente a fixação e amarração de estruturas amovíveis (tendas, coberturas e palcos).\n• Assegure um plano de abrigo em local coberto seguro para os participantes.\n• Monitorize em permanência a evolução do vento e precipitação para suspensão preventiva do recinto se necessário."
+                risco_meteo = f"RISCO ELEVADO A BREVE PRAZO: Potencial de danos previstos para as próximas {horizonte_horas}h."
+                rec_pop = "• Adote uma condução defensiva e evite a circulação junto a zonas arborizadas.\n• Esteja atento à acumulação de água na via pública."
+                rec_org = "• Reforce preventivamente a fixação de estruturas amovíveis (tendas e palcos).\n• Monitore a evolução do vento e precipitação."
             elif nivel_j == "AMARELO":
-                risco_meteo = "RISCO MODERADO: Possibilidade de perturbações pontuais na circulação e atividades ao ar livre."
-                rec_pop = "• Mantenha a atenção ao circular junto a árvores ou estruturas expostas ao vento.\n• Precaveja-se contra a ocorrência de aguaceiros repentinos ou vento moderado.\n• Garanta a fixação de objetos soltos em varandas, terraços e quintais."
-                rec_org = "• Verifique preventivamente a amarração de coberturas, telas e instalações elétricas temporárias no exterior.\n• Mantenha os acessos e saídas de emergência do recinto livres e desobstruídos."
+                risco_meteo = f"RISCO MODERADO A BREVE PRAZO: Condições desfavoráveis previstas para as próximas {horizonte_horas}h."
+                rec_pop = "• Mantenha atenção ao circular junto a árvores ou estruturas expostas ao vento.\n• Precaveja-se contra aguaceiros repentinos."
+                rec_org = "• Verifique a fixação de coberturas e instalações temporárias no exterior."
             else:
-                risco_meteo = "ESTADO NORMAL: Sem riscos meteorológicos severos previstos no período em análise."
-                rec_pop = "• Adote as medidas habituais de autoproteção e mantenha-se informado sobre a situação meteorológica."
-                rec_org = "• Garanta a manutenção das condições normais de segurança, acessibilidade e prevenção no recinto do evento."
+                risco_meteo = f"ESTADO NORMAL: Sem riscos meteorológicos severos previstos para as próximas {horizonte_horas}h."
+                rec_pop = "• Adote as medidas habituais de autoproteção e mantenha-se informado."
+                rec_org = "• Mantenha as condições normais de segurança e prevenção no recinto."
         else:
             if nivel_j == "VERMELHO":
-                risco_meteo = "EXTREME RISK: Severe danger to personal safety, property, and structures."
-                rec_pop = "• Avoid non-essential travel during the critical period.\n• Stay away from wooded areas, cliffs, and unprotected temporary structures.\n• Do not attempt to cross flooded roads or water channels.\n• Strictly follow all directions from Civil Protection and emergency authorities."
-                rec_org = "• Suspend or postpone outdoor activities.\n• Secure or dismantle temporary structures (tents, stages, signage).\n• Activate contingency plans and notify the public in advance."
+                risco_meteo = f"IMMINENT EXTREME RISK: Severe danger expected over the next {horizonte_horas}h."
+                rec_pop = "• Avoid non-essential travel during the critical period.\n• Stay away from wooded areas and temporary structures."
+                rec_org = "• Suspend or postpone outdoor activities.\n• Secure or dismantle temporary structures."
             elif nivel_j == "LARANJA":
-                risco_meteo = "ELEVATED RISK: High potential for structural damage, falling branches, and localized flooding."
-                rec_pop = "• Drive defensively, reduce speed, and increase safety distance.\n• Avoid staying or walking near large trees or wind-exposed structures.\n• Watch for standing water on roads and ensure private drainage is clear."
-                rec_org = "• Reinforce anchoring for all temporary structures (tents and stages).\n• Prepare an alternative covered shelter or emergency plan for attendees.\n• Monitor real-time weather and suspend operations if safety thresholds are met."
+                risco_meteo = f"ELEVATED SHORT-TERM RISK: Potential damage expected in the next {horizonte_horas}h."
+                rec_pop = "• Drive defensively and avoid wooded areas.\n• Watch for standing water on roads."
+                rec_org = "• Reinforce anchoring for temporary structures.\n• Monitor real-time weather conditions."
             elif nivel_j == "AMARELO":
-                risco_meteo = "MODERATE RISK: Potential minor disruptions to outdoor activities and travel."
-                rec_pop = "• Stay alert when driving or walking in exposed areas.\n• Prepare for sudden rain showers or gusty winds.\n• Secure loose objects on balconies and outdoor areas."
-                rec_org = "• Inspect anchor points for temporary covers, banners, and outdoor electrical setups.\n• Keep emergency exits and access routes clear."
+                risco_meteo = f"MODERATE SHORT-TERM RISK: Unfavorable conditions expected in the next {horizonte_horas}h."
+                rec_pop = "• Stay alert when driving or walking in exposed areas."
+                rec_org = "• Inspect anchor points for outdoor temporary setups."
             else:
-                risco_meteo = "NORMAL STATUS: No severe weather risks expected during the analyzed period."
-                rec_pop = "• Follow standard self-protection measures and remain informed."
-                rec_org = "• Ensure routine safety, accessibility, and emergency standards are maintained."
+                risco_meteo = f"NORMAL STATUS: No severe weather risks expected in the next {horizonte_horas}h."
+                rec_pop = "• Follow standard self-protection measures."
+                rec_org = "• Ensure routine safety and prevention standards."
 
-        fmt_ini_pt = formatar_data_pt(dt_inicio)
-        fmt_fim_pt = formatar_data_pt(dt_fim)
-        fmt_ini_en = dt_inicio.strftime('%A, %B %d, %Y, at %H:%M')
-        fmt_fim_en = dt_fim.strftime('%A, %B %d, %Y, at %H:%M')
+        data_consulta_fmt = formatar_data_pt(agora)
 
         if idioma == "Português":
             if tipo_alvo.startswith("População"):
                 msg_final = (
-                    f"🌧️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta\n"
-                    f"📅 *Período:* De {fmt_ini_pt} até {fmt_fim_pt}\n\n"
+                    f"🌧️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta de Curto Prazo\n"
+                    f"🕒 *Emitido em:* {data_consulta_fmt} (Horizontes de análise: próximas {horizonte_horas}h)\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* — SETOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"🗣️ *O que esperar no local:*\n"
-                    f"• 🌧️ *Precipitação:* {desc_chuva_pop} (acumulado total: {acum_janela_total:.1f} mm)\n"
-                    f"• 💨 *Vento:* {desc_vento_pop} (rajada máx: {vento_janela_max:.0f} km/h)\n"
+                    f"{sugestao_emissao}\n\n"
+                    f"🗣️ *O que esperar nas próximas {horizonte_horas}h:*\n"
+                    f"• 🌧️ *Precipitação:* {desc_chuva_pop} (acumulado previsto: {acum_janela_total:.1f} mm)\n"
+                    f"• 💨 *Vento:* {desc_vento_pop} (rajada máx: {vento_janela_max:.0f} km/h - {cardeal_vento_str} {seta_vento_str})\n"
                     f"• 🌡️ *Temperatura Média:* {temp_janela_media:.0f} °C\n"
                     f"{picos_texto_pt}\n\n"
                     f"🛡️ *Medidas de Autoproteção e Prevenção:*\n"
                     f"{rec_pop}\n\n"
                     f"🔗 Consulte os avisos ativos do IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
-                    f"_Fonte: Análise de modelos de previsão de meteorologia._"
+                    f"_Fonte: Análise de modelos de previsão de meteorologia (ECMWF)._"
                 )
             else:
                 prob_c = min(95, int(chuva_janela_max * 20 + 20)) if chuva_janela_max > 0 else 10
                 msg_final = (
-                    f"🛡️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta para Organizadores de Eventos\n"
-                    f"📅 *Período do Evento:* De {fmt_ini_pt} até {fmt_fim_pt}\n\n"
+                    f"🛡️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta para Organizadores (Próximas {horizonte_horas}h)\n"
+                    f"🕒 *Emitido em:* {data_consulta_fmt}\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* | Setor: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"📊 *Valores previstos no período em análise:*\n"
-                    f"• 🌧️ *Precipitação:* Máx. horária de *{chuva_janela_max:.1f} mm/h* | Acumulado total: *{acum_janela_total:.1f} mm* (Probabilidade: *{prob_c}%*)\n"
-                    f"• 💨 *Vento:* Rajada máxima de *{vento_janela_max:.0f} km/h*\n"
+                    f"{sugestao_emissao}\n\n"
+                    f"📊 *Valores previstos no período de {horizonte_horas}h:*\n"
+                    f"• 🌧️ *Precipitação:* Máx. horária de *{chuva_janela_max:.1f} mm/h* | Acumulado total: *{acum_janela_total:.1f} mm* (Prob.: *{prob_c}%*)\n"
+                    f"• 💨 *Vento:* Rajada máxima de *{vento_janela_max:.0f} km/h* ({cardeal_vento_str} {seta_vento_str})\n"
                     f"{picos_texto_pt}\n\n"
                     f"👉 *Recomendações de Proteção Civil (Prevenção):*\n"
                     f"{rec_org}\n\n"
                     f"🔗 AVISOS IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
-                    f"_Fonte: Análise de modelos de previsão de meteorologia._"
+                    f"_Fonte: Análise de modelos de previsão de meteorologia (ECMWF)._"
                 )
         else:
+            # Versão Inglês
             if tipo_alvo.startswith("População"):
                 msg_final = (
-                    f"🌧️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Weather Alert\n"
-                    f"📅 *Period:* From {fmt_ini_en} to {fmt_fim_en}\n\n"
+                    f"🌧️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Short-Term Weather Alert\n"
+                    f"🕒 *Issued at:* {agora.strftime('%Y-%m-%d %H:%M')} (Next {horizonte_horas}h forecast)\n\n"
                     f"⚠️ *{ico_j} {nivel_j} ALERT* — SECTOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"🗣️ *What to expect:*\n"
+                    f"🗣️ *What to expect in the next {horizonte_horas}h:*\n"
                     f"• 🌧️ *Rainfall:* {desc_chuva_pop} (total accum: {acum_janela_total:.1f} mm)\n"
-                    f"• 💨 *Wind:* {desc_vento_pop} (peak gust: {vento_janela_max:.0f} km/h)\n"
-                    f"• 🌡️ *Average Temp:* {temp_janela_media:.0f} °C\n"
+                    f"• 💨 *Wind:* {desc_vento_pop} (peak gust: {vento_janela_max:.0f} km/h - {cardeal_vento_str})\n"
                     f"{picos_texto_en}\n\n"
-                    f"🛡️ *Self-Protection and Prevention Measures:*\n"
+                    f"🛡️ *Self-Protection Measures:*\n"
                     f"{rec_pop}\n\n"
-                    f"🔗 Check active IPMA warnings: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
-                    f"_Source: Analysis of meteorological forecasting models._"
+                    f"🔗 Check active IPMA warnings: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA"
                 )
             else:
-                prob_c = min(95, int(chuva_janela_max * 20 + 20)) if chuva_janela_max > 0 else 10
                 msg_final = (
-                    f"🛡️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Event Weather Alert\n"
-                    f"📅 *Event Time Frame:* From {fmt_ini_en} to {fmt_fim_en}\n\n"
+                    f"🛡️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Event Organizers Alert ({horizonte_horas}h)\n"
+                    f"🕒 *Issued at:* {agora.strftime('%Y-%m-%d %H:%M')}\n\n"
                     f"⚠️ *{ico_j} {nivel_j} ALERT* | Sector: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"📊 *Forecasted Values in Analyzed Period:*\n"
-                    f"• 🌧️ *Precipitation:* Peak hourly rate of *{chuva_janela_max:.1f} mm/h* | Total accum: *{acum_janela_total:.1f} mm* (Probability: *{prob_c}%*)\n"
-                    f"• 💨 *Wind:* Peak gust of *{vento_janela_max:.0f} km/h*\n"
+                    f"📊 *Forecasted Values ({horizonte_horas}h window):*\n"
+                    f"• 🌧️ *Precipitation:* Peak rate *{chuva_janela_max:.1f} mm/h* | Total: *{acum_janela_total:.1f} mm*\n"
+                    f"• 💨 *Wind:* Peak gust *{vento_janela_max:.0f} km/h* ({cardeal_vento_str})\n"
                     f"{picos_texto_en}\n\n"
-                    f"👉 *Civil Protection Prevention Recommendations:*\n"
+                    f"👉 *Recommendations:*\n"
                     f"{rec_org}\n\n"
-                    f"🔗 IPMA WARNINGS: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
-                    f"_Source: Analysis of meteorological forecasting models._"
+                    f"🔗 IPMA WARNINGS: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA"
                 )
 
         st.success("Mensagem gerada com sucesso! Pode copiar o bloco abaixo para partilhar:")
@@ -675,7 +707,7 @@ if not df.empty:
     hora_pico_chuva_fmt = hora_c.strftime('%d/%m às %H:%M')
 
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-    col_p1.metric("Pico Máx. de Rajada", f"{pico_r:.1f} km/h", delta=f"Previsto: {hora_pico_rajada_fmt}", delta_color="inverse")
+    col_p1.metric("Pico Máx. de Rajada", f"{pico_r:.1f} km/h {seta_vento_str}", delta=f"Previsto: {hora_pico_rajada_fmt}", delta_color="inverse")
     col_p2.metric("Pico Máx. de Precipitação", f"{pico_c:.1f} mm/h", delta=f"Previsto: {hora_pico_chuva_fmt}", delta_color="inverse")
     col_p3.metric("Grau de Confiança", f"{confianca}%", help="Estabilidade dos dados cruzados com estações de referência.")
     col_p4.metric("Acumulado Previsto", f"{df_futuro['Precipitação (mm)'].sum():.1f} mm", delta="Janela Operacional")

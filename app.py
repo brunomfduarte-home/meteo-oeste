@@ -8,34 +8,50 @@ import pydeck as pdk
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Concelho",
+    page_title="Meteo Óbidos — Comando Operacional & Zonas de Risco",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel de suporte à decisão com **análisis setorial e global do concelho**, mapa visual de risco e picos temporais críticos.")
+st.markdown("Painel setorial e global com **mapa tático por polígonos territoriais**, avaliação de risco IPMA e picos temporais.")
 
 # ==============================================================================
-# SEGMENTAÇÃO GEOMORFOLÓGICA DE ÓBIDOS (Incluindo a opção Consolidada)
+# SEGMENTAÇÃO GEOMORFOLÓGICA E POLÍGONOS DOS SETORES DE ÓBIDOS
 # ==============================================================================
 setores_obidos = {
     "🌍 Todo o Concelho (Consolidado)": {
         "lat": 39.3700, "lon": -9.1600, 
-        "perfil": "Visão global agregada de todo o território de Óbidos (média dos três setores geomorfológicos)."
+        "perfil": "Visão global agregada de todo o território de Óbidos.",
+        "polygon": [
+            [-9.260, 39.340], [-9.080, 39.340], 
+            [-9.080, 39.415], [-9.260, 39.415]
+        ]
     },
     "🏛️ Centro Histórico (Vila / Cota Alta)": {
         "lat": 39.3607, "lon": -9.1572, 
-        "perfil": "Zona elevada e muralhada. Exposição direta a rajadas canalizadas."
+        "perfil": "Zona elevada e muralhada. Exposição direta a rajadas canalizadas.",
+        "polygon": [
+            [-9.175, 39.350], [-9.140, 39.350], 
+            [-9.140, 39.375], [-9.175, 39.375]
+        ]
     },
     "🌊 Litoral & Lagoa (Bom Sucesso / Vau)": {
         "lat": 39.3800, "lon": -9.2200, 
-        "perfil": "Zona estuarina e lagunar. Vulnerável a marés, vento atlântico e frentes costeiras."
+        "perfil": "Zona estuarina e lagunar. Vulnerável a marés, vento atlântico e frentes costeiras.",
+        "polygon": [
+            [-9.260, 39.340], [-9.185, 39.340], 
+            [-9.185, 39.410], [-9.260, 39.410]
+        ]
     },
     "🌾 Interior & Bacia do Arnóia (A-dos-Negros / Olho Marinho)": {
         "lat": 39.3700, "lon": -9.1300, 
-        "perfil": "Zona de vales aluviais. Suscetível a retenção de humidade e cheias de bacia."
+        "perfil": "Zona de vales aluviais. Suscetível a retenção de humidade e cheias de bacia.",
+        "polygon": [
+            [-9.150, 39.355], [-9.080, 39.355], 
+            [-9.080, 39.415], [-9.150, 39.415]
+        ]
     }
 }
 
@@ -67,7 +83,7 @@ def obter_dados_cruzados(lat, lon, past, forecast):
         return df
     return pd.DataFrame()
 
-# Se for "Todo o Concelho", calculamos a média ponderada dos 3 subsetores principais
+# Se for "Todo o Concelho", calculamos a média ponderada dos subsetores
 if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
     sub_chaves = [k for k in setores_obidos.keys() if k != "🌍 Todo o Concelho (Consolidado)"]
     dfs = []
@@ -122,10 +138,10 @@ if not df.empty:
     else: st.success(mensagem_topo)
 
     # ==============================================================================
-    # MAPA VISUAL INTERACTIVO POR SETOR DE ÓBIDOS (PYDECK)
+    # MAPA TÁTICO COM POLÍGONOS SETORIAIS COLORIDOS POR AVISO
     # ==============================================================================
-    st.subheader("🗺️ Mapa Operacional de Risco — Concelho de Óbidos")
-    st.caption("Visualização geográfica de todas as áreas do concelho com marcação cromática baseada no nível de alerta atual.")
+    st.subheader("🗺️ Mapa Tático de Risco — Setores do Concelho de Óbidos")
+    st.caption("As áreas territoriais encontram-se coloridas de acordo com o respetivo nível de aviso meteorológico ativo.")
 
     dados_mapa = []
     for nome_s, info_s in setores_obidos.items():
@@ -136,19 +152,19 @@ if not df.empty:
             r_max = df_s['Rajada (km/h)'].max()
             c_max = df_s['Precipitação (mm)'].max()
             
+            # Cores oficiais correspondentes ao risco (RGBA)
             if r_max > 110 or c_max > 35:
-                niv, cor = "VERMELHO", [255, 0, 0, 220]
+                niv, cor = "VERMELHO", [255, 0, 0, 160]
             elif r_max > 90 or c_max > 20:
-                niv, cor = "LARANJA", [255, 128, 0, 220]
+                niv, cor = "LARANJA", [255, 128, 0, 160]
             elif r_max > 70 or c_max > 10:
-                niv, cor = "AMARELO", [255, 204, 0, 220]
+                niv, cor = "AMARELO", [255, 204, 0, 160]
             else:
-                niv, cor = "VERDE", [0, 200, 0, 220]
+                niv, cor = "VERDE", [0, 200, 0, 140]
                 
             dados_mapa.append({
                 "setor": nome_s,
-                "lat": info_s["lat"],
-                "lon": info_s["lon"],
+                "polygon": info_s["polygon"],
                 "nivel": niv,
                 "rajada": f"{r_max:.1f}",
                 "chuva": f"{c_max:.1f}",
@@ -157,25 +173,27 @@ if not df.empty:
 
     df_mapa_final = pd.DataFrame(dados_mapa)
 
-    camada_mapa = pdk.Layer(
-        "ScatterplotLayer",
+    # Utilização de PolygonLayer para cobrir todo o setor em vez de pontos
+    camada_poligonos = pdk.Layer(
+        "PolygonLayer",
         data=df_mapa_final,
-        get_position=["lon", "lat"],
-        get_color="cor",
-        get_radius=1200,
+        get_polygon="polygon",
+        get_fill_color="cor",
+        get_line_color=[255, 255, 255, 200],
+        get_line_width=60,
         pickable=True,
         auto_highlight=True,
     )
 
     view_state_obidos = pdk.ViewState(
-        latitude=39.3700,
+        latitude=39.3750,
         longitude=-9.1700,
-        zoom=11.2,
-        pitch=0,
+        zoom=10.6,
+        pitch=15,
     )
 
     mapa_deck = pdk.Deck(
-        layers=[camada_mapa],
+        layers=[camada_poligonos],
         initial_view_state=view_state_obidos,
         tooltip={"text": "Setor: {setor}\nAlerta: {nivel}\nRajada Máx: {rajada} km/h\nChuva Máx: {chuva} mm/h"}
     )
@@ -230,7 +248,7 @@ if not df.empty:
             f"⏱️ **Picos Temporais Críticos:**\n"
             f"- *Rajada Máxima:* {pico_r:.1f} km/h (Previsto para {hora_pico_rajada_fmt})\n"
             f"- *Intensidade Máxima de Chuva:* {pico_c:.1f} mm/h (Previsto para {hora_pico_chuva_fmt})\n\n"
-            f"💡 **Recomendação Operacional:** Monitorizar infraestruturas em todo o concelho com base no mapa tático."
+            f"💡 **Recomendação Operacional:** Monitorizar infraestruturas no concelho de acordo com o mapa tático setorial."
         )
         st.code(minuta, language="markdown")
 

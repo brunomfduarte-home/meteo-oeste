@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-08T19:39:07.252853+00:00",
-  "anchor": "2026-11-08T19:00:00+00:00",
+  "generatedAt": "2026-11-08T23:41:19.371809+00:00",
+  "anchor": "2026-11-08T23:00:00+00:00",
   "warnings": [
     {
       "level": "Amarelo",
@@ -22,8 +22,16 @@
       "level": "Amarelo",
       "phenomenon": "Precipitação",
       "start": "2026-11-09T21:00:00+00:00",
-      "end": "2026-11-10T06:00:00+00:00",
+      "end": "2026-11-10T18:00:00+00:00",
       "description": "Períodos de chuva ou aguaceiros por vezes fortes.",
+      "issued": null
+    },
+    {
+      "level": "Amarelo",
+      "phenomenon": "Precipitação",
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T18:00:00+00:00",
+      "description": "Precipitação por vezes forte e persistente.",
       "issued": null
     },
     {
@@ -38,14 +46,14 @@
       "level": "Amarelo",
       "phenomenon": "Trovoada",
       "start": "2026-11-09T21:00:00+00:00",
-      "end": "2026-11-10T06:00:00+00:00",
+      "end": "2026-11-10T15:00:00+00:00",
       "description": "Condições favoráveis para ocorrência de fenómenos meteorológicos localizados, como: trovoada; precipitação localmente forte, com acumulação entre 10 a 20 mm em 1 h; rajadas entre 70 e 90 km/h.",
       "issued": null
     },
     {
       "level": "Amarelo",
       "phenomenon": "Vento",
-      "start": "2026-11-08T18:00:00+00:00",
+      "start": "2026-11-08T22:24:00+00:00",
       "end": "2026-11-09T06:00:00+00:00",
       "description": "Vento do quadrante sul com rajadas até 75 km/h.",
       "issued": null
@@ -72,8 +80,16 @@
       "level": "Amarelo",
       "phenomenon": "Precipitação",
       "start": "2026-11-09T21:00:00+00:00",
-      "end": "2026-11-10T06:00:00+00:00",
+      "end": "2026-11-10T18:00:00+00:00",
       "description": "Períodos de chuva ou aguaceiros por vezes fortes.",
+      "issued": null
+    },
+    {
+      "level": "Amarelo",
+      "phenomenon": "Precipitação",
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T18:00:00+00:00",
+      "description": "Precipitação por vezes forte e persistente.",
       "issued": null
     },
     {
@@ -88,14 +104,14 @@
       "level": "Amarelo",
       "phenomenon": "Trovoada",
       "start": "2026-11-09T21:00:00+00:00",
-      "end": "2026-11-10T06:00:00+00:00",
+      "end": "2026-11-10T15:00:00+00:00",
       "description": "Condições favoráveis para ocorrência de fenómenos meteorológicos localizados, como: trovoada; precipitação localmente forte, com acumulação entre 10 a 20 mm em 1 h; rajadas entre 70 e 90 km/h.",
       "issued": null
     },
     {
       "level": "Amarelo",
       "phenomenon": "Vento",
-      "start": "2026-11-08T18:00:00+00:00",
+      "start": "2026-11-08T22:24:00+00:00",
       "end": "2026-11-09T06:00:00+00:00",
       "description": "Vento do quadrante sul com rajadas até 75 km/h.",
       "issued": null
@@ -116,10 +132,10 @@
       "source": "GFS",
       "window": "0–6 h",
       "metric": "Chuva 1h",
-      "value": 0.3,
+      "value": 1.4,
       "level": 0,
-      "start": "2026-11-08T19:00:00+00:00",
-      "end": "2026-11-08T20:00:00+00:00"
+      "start": "2026-11-09T01:00:00+00:00",
+      "end": "2026-11-09T02:00:00+00:00"
     },
     {
       "source": "GFS",
@@ -134,19 +150,19 @@
       "source": "GFS",
       "window": "0–24 h",
       "metric": "Chuva 1h",
-      "value": 0.9,
+      "value": 2.2,
       "level": 0,
-      "start": "2026-11-09T01:00:00+00:00",
-      "end": "2026-11-09T02:00:00+00:00"
+      "start": "2026-11-09T21:00:00+00:00",
+      "end": "2026-11-09T22:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "0–24 h",
       "metric": "Chuva 6h",
-      "value": 1.1,
+      "value": 2.6,
       "level": 0,
-      "start": "2026-11-09T00:00:00+00:00",
-      "end": "2026-11-09T06:00:00+00:00"
+      "start": "2026-11-09T12:00:00+00:00",
+      "end": "2026-11-09T18:00:00+00:00"
     },
     {
       "source": "GFS",
@@ -161,16 +177,16 @@
       "source": "GFS",
       "window": "24–48 h",
       "metric": "Chuva 1h",
-      "value": 9.8,
+      "value": 3.3,
       "level": 0,
-      "start": "2026-11-09T21:00:00+00:00",
-      "end": "2026-11-09T22:00:00+00:00"
+      "start": "2026-11-10T18:00:00+00:00",
+      "end": "2026-11-10T19:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "24–48 h",
       "metric": "Chuva 6h",
-      "value": 4.9,
+      "value": 10.7,
       "level": 0,
       "start": "2026-11-10T12:00:00+00:00",
       "end": "2026-11-10T18:00:00+00:00"
@@ -179,52 +195,52 @@
       "source": "GFS",
       "window": "48–72 h",
       "metric": "Rajada",
-      "value": 51.1,
+      "value": 45.7,
       "level": 0,
-      "start": "2026-11-10T19:00:00+00:00",
-      "end": "2026-11-10T20:00:00+00:00"
+      "start": "2026-11-10T23:00:00+00:00",
+      "end": "2026-11-11T00:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "48–72 h",
       "metric": "Chuva 1h",
-      "value": 1.9,
+      "value": 9.7,
       "level": 0,
-      "start": "2026-11-11T00:00:00+00:00",
-      "end": "2026-11-11T01:00:00+00:00"
+      "start": "2026-11-11T15:00:00+00:00",
+      "end": "2026-11-11T16:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "48–72 h",
       "metric": "Chuva 6h",
-      "value": 6.1,
+      "value": 18.4,
       "level": 0,
-      "start": "2026-11-11T00:00:00+00:00",
-      "end": "2026-11-11T06:00:00+00:00"
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T18:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "0–6 h",
       "metric": "Rajada",
-      "value": 53.6,
+      "value": 54.0,
       "level": 0,
-      "start": "2026-11-08T19:00:00+00:00",
-      "end": "2026-11-08T20:00:00+00:00"
+      "start": "2026-11-08T23:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "0–24 h",
       "metric": "Rajada",
-      "value": 54.0,
+      "value": 57.6,
       "level": 0,
-      "start": "2026-11-09T11:00:00+00:00",
-      "end": "2026-11-09T12:00:00+00:00"
+      "start": "2026-11-09T14:00:00+00:00",
+      "end": "2026-11-09T15:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "0–24 h",
       "metric": "Chuva 6h",
-      "value": 3.9,
+      "value": 6.3,
       "level": 0,
       "start": "2026-11-09T12:00:00+00:00",
       "end": "2026-11-09T18:00:00+00:00"
@@ -233,16 +249,16 @@
       "source": "ECMWF",
       "window": "24–48 h",
       "metric": "Rajada",
-      "value": 59.4,
+      "value": 54.4,
       "level": 0,
-      "start": "2026-11-10T12:00:00+00:00",
-      "end": "2026-11-10T13:00:00+00:00"
+      "start": "2026-11-10T13:00:00+00:00",
+      "end": "2026-11-10T14:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "24–48 h",
       "metric": "Chuva 6h",
-      "value": 18.0,
+      "value": 8.4,
       "level": 0,
       "start": "2026-11-10T06:00:00+00:00",
       "end": "2026-11-10T12:00:00+00:00"
@@ -251,19 +267,19 @@
       "source": "ECMWF",
       "window": "48–72 h",
       "metric": "Rajada",
-      "value": 48.2,
+      "value": 49.3,
       "level": 0,
-      "start": "2026-11-11T02:00:00+00:00",
-      "end": "2026-11-11T03:00:00+00:00"
+      "start": "2026-11-11T20:00:00+00:00",
+      "end": "2026-11-11T21:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "48–72 h",
       "metric": "Chuva 6h",
-      "value": 11.7,
-      "level": 0,
-      "start": "2026-11-11T06:00:00+00:00",
-      "end": "2026-11-11T12:00:00+00:00"
+      "value": 31.2,
+      "level": 1,
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T18:00:00+00:00"
     },
     {
       "source": "NOAA GEFS",
@@ -272,7 +288,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 7,
+        "Amarelo": 2,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -284,7 +300,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 7,
+        "Amarelo": 2,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -308,7 +324,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 2,
+        "Amarelo": 4,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -320,7 +336,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 1,
+        "Amarelo": 0,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -332,8 +348,8 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 3,
-        "Laranja": 2,
+        "Amarelo": 0,
+        "Laranja": 0,
         "Vermelho": 0
       }
     },
@@ -344,7 +360,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 2,
+        "Amarelo": 1,
         "Laranja": 1,
         "Vermelho": 0
       }
@@ -368,7 +384,7 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 1,
+        "Amarelo": 0,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -392,7 +408,7 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 1,
+        "Amarelo": 4,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -416,9 +432,9 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 5,
-        "Laranja": 3,
-        "Vermelho": 2
+        "Amarelo": 17,
+        "Laranja": 7,
+        "Vermelho": 0
       }
     },
     {
@@ -428,8 +444,8 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 1,
-        "Laranja": 1,
+        "Amarelo": 4,
+        "Laranja": 0,
         "Vermelho": 0
       }
     }
@@ -441,7 +457,7 @@
     },
     "Chuva 6h": {
       "level": 0,
-      "end": "2026-11-09T06:00:00+00:00"
+      "end": "2026-11-09T18:00:00+00:00"
     }
   },
   "extendedAt": "2026-11-08T15:07:54.989169+00:00",
@@ -532,6 +548,39 @@
     }
   ],
   "extendedIssues": {},
-  "changes": [],
-  "withdrawn": []
+  "changes": [
+    "IPMA: Amarelo · Precipitação · 09/11 21:00 WET–10/11 18:00 WET",
+    "IPMA: Amarelo · Precipitação · 11/11 12:00 WET–11/11 18:00 WET",
+    "IPMA: Amarelo · Trovoada · 09/11 21:00 WET–10/11 15:00 WET",
+    "IPMA: Amarelo · Vento · 08/11 22:24 WET–09/11 06:00 WET",
+    "IPMA: aviso anterior alterado ou retirado · Precipitação · 09/11 21:00 WET–10/11 06:00 WET",
+    "IPMA: aviso anterior alterado ou retirado · Trovoada · 09/11 21:00 WET–10/11 06:00 WET",
+    "IPMA: aviso anterior alterado ou retirado · Vento · 08/11 18:00 WET–09/11 06:00 WET"
+  ],
+  "withdrawn": [
+    {
+      "level": "Amarelo",
+      "phenomenon": "Precipitação",
+      "start": "2026-11-09T21:00:00+00:00",
+      "end": "2026-11-10T06:00:00+00:00",
+      "description": "Períodos de chuva ou aguaceiros por vezes fortes.",
+      "issued": null
+    },
+    {
+      "level": "Amarelo",
+      "phenomenon": "Trovoada",
+      "start": "2026-11-09T21:00:00+00:00",
+      "end": "2026-11-10T06:00:00+00:00",
+      "description": "Condições favoráveis para ocorrência de fenómenos meteorológicos localizados, como: trovoada; precipitação localmente forte, com acumulação entre 10 a 20 mm em 1 h; rajadas entre 70 e 90 km/h.",
+      "issued": null
+    },
+    {
+      "level": "Amarelo",
+      "phenomenon": "Vento",
+      "start": "2026-11-08T18:00:00+00:00",
+      "end": "2026-11-09T06:00:00+00:00",
+      "description": "Vento do quadrante sul com rajadas até 75 km/h.",
+      "issued": null
+    }
+  ]
 }

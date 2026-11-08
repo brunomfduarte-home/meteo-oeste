@@ -8,14 +8,14 @@ import pydeck as pdk
 from datetime import datetime, time, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Avisos IPMA",
+    page_title="Serviço Municipal de Proteção Civil de Óbidos - Análise Meteorológica",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel tático de Proteção Civil, mapeamento por polígonos, análise de picos temporais e gerador de avisos percetíveis.")
+st.title("🛡️ Serviço Municipal de Proteção Civil de Óbidos - Análise Meteorológica")
+st.markdown("Painel tático de apoio à decisão operacional, monitorização setorial por polígonos e emissão de avisos à população e organizadores.")
 
 # ==============================================================================
 # DICIONÁRIOS DE TRADUÇÃO DE DATAS PARA PORTUGUÊS DE PORTUGAL
@@ -254,10 +254,10 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # MÓDULO DE GESTÃO DE AVISOS E EVENTOS
+    # MÓDULO DE GESTÃO DE AVISOS E EVENTOS (PADRÃO PROTEÇÃO CIVIL)
     # ==============================================================================
     st.subheader("📢 Central de Avisos & Recomendações (Padrão UNDRR)")
-    st.markdown("Defina a **data/hora de início e fim** para gerar alertas com valores técnicos para organizadores ou descrições claras para a população.")
+    st.markdown("Defina a **data/hora de início e fim** para gerar alertas operacionais e medidas de autoproteção e prevenção.")
 
     idioma = st.radio("Idioma do Comunicado / Language", ["Português", "English"], horizontal=True)
 
@@ -337,15 +337,15 @@ if not df.empty:
         else:
             nivel_j, ico_j = "VERDE", "🟢"
 
-        # TRADUÇÃO QUALITATIVA DE PERCETIBILIDADE PARA A POPULAÇÃO
+        # DESCRITORES QUALITATIVOS DA ATMOSFERA
         if chuva_janela_max == 0 and acum_janela_total == 0:
             desc_chuva_pop = "Sem chuva prevista (tempo seco)."
         elif acum_janela_total < 3.0:
-            desc_chuva_pop = "Chuva fraca ou aguaceiros dispersos e de pouca duração."
+            desc_chuva_pop = "Chuva fraca ou aguaceiros dispersos de curta duração."
         elif acum_janela_total < 15.0:
-            desc_chuva_pop = "Chuva moderada. Recomenda-se o uso de guarda-chuva."
+            desc_chuva_pop = "Chuva moderada. Recomenda-se precaução na circulação."
         elif acum_janela_total < 35.0:
-            desc_chuva_pop = "Chuva forte e persistente. Possibilidade de acumulação de água na via pública."
+            desc_chuva_pop = "Chuva forte e persistente. Risco de acumulação de água na via pública."
         else:
             desc_chuva_pop = "Chuva muito forte e intensa com risco elevado de inundações rápidas."
 
@@ -358,44 +358,41 @@ if not df.empty:
         else:
             desc_vento_pop = "Vento muito forte e severo com risco de queda de ramos e estragos em estruturas."
 
-        risco_meteo = ""
-        rec_pop = ""
-        rec_org = ""
-
+        # RECOMENDAÇÕES EXCLUSIVAS NO ÂMBITO DA PROTEÇÃO CIVIL (AUTOPROTEÇÃO E PREVENÇÃO)
         if idioma == "Português":
             if nivel_j == "VERMELHO":
-                risco_meteo = "RISCO EXTREMO: Perigo muito elevado para pessoas, bens e estruturas ao ar livre."
-                rec_pop = "• Evite deslocações desnecessárias durante o período do evento.\n• Não permaneça sob árvores ou estruturas temporárias.\n• Siga estritamente as instruções de evacuação ou recolhimento das autoridades."
-                rec_org = "• Suspenda ou adie atividades ao ar livre.\n• Desmonte ou garanta o reforço estrutural de tendas, palcos e sinalética.\n• Ative o plano de contingência e comunique o cancelamento ao público com antecedência."
+                risco_meteo = "RISCO EXTREMO: Perigo grave para a integridade física de pessoas, bens e estruturas."
+                rec_pop = "• Evite deslocações não essenciais durante o período crítico.\n• Afaste-se de zonas arborizadas, arribas e estruturas temporárias ou desprotegidas.\n• Não tente atravessar passagens molhadas, linhas de água ou áreas inundadas.\n• Siga escrupulosamente as orientações das autoridades de Proteção Civil e Forças de Segurança."
+                rec_org = "• Suspenda ou adie as atividades programadas ao ar livre.\n• Garanta o desmonte ou o reforço preventivo de estruturas amovíveis (tendas, palcos, painéis e sinalética).\n• Ative o plano de contingência e comunique antecipadamente a suspensão ao público."
             elif nivel_j == "LARANJA":
-                risco_meteo = "RISCO ELEVADO: Potencial de danos estruturais, queda de ramos/árvores e acumulação de água."
-                rec_pop = "• Conduza com precaução reduzida e evite zonas com árvores de grande porte.\n• Não tente atravessar linhas de água ou zonas com acumulação de água."
-                rec_org = "• Reforce a amarração de estruturas amovíveis (tendas e palcos).\n• Garanta um local coberto alternativo ou plano de abrigo para o público.\n• Monitorize as rajadas e suspenda o evento se o vento colocar em causa a segurança."
+                risco_meteo = "RISCO ELEVADO: Potencial de danos em estruturas, queda de ramos/árvores e inundações urbanas."
+                rec_pop = "• Adote uma condução defensiva, reduzindo a velocidade e aumentando a distância de segurança.\n• Evite a circulação e permanência junto a zonas arborizadas ou estruturas sujeitas à ação do vento.\n• Esteja atento à acumulação de água na via pública e desobstrua sistemas de escoamento privados."
+                rec_org = "• Reforce preventivamente a fixação e amarração de estruturas amovíveis (tendas, coberturas e palcos).\n• Assegure um plano de abrigo em local coberto seguro para os participantes.\n• Monitorize em permanência a evolução do vento e precipitação para suspensão preventiva do recinto se necessário."
             elif nivel_j == "AMARELO":
-                risco_meteo = "RISCO MODERADO: Condições meteorológicas desfavoráveis para algumas atividades ao ar livre."
-                rec_pop = "• Mantenha a atenção na circulação pedonal e rodoviária.\n• Tenha em conta a possibilidade de aguaceiros ou vento moderado durante a participação no evento."
-                rec_org = "• Verifique a fixação de telas, coberturas e equipamentos elétricos instalados no exterior.\n• Tenha prontas soluções de proteção contra a chuva para os participantes."
+                risco_meteo = "RISCO MODERADO: Possibilidade de perturbações pontuais na circulação e atividades ao ar livre."
+                rec_pop = "• Mantenha a atenção ao circular junto a árvores ou estruturas expostas ao vento.\n• Precaveja-se contra a ocorrência de aguaceiros repentinos ou vento moderado.\n• Garanta a fixação de objetos soltos em varandas, terraços e quintais."
+                rec_org = "• Verifique preventivamente a amarração de coberturas, telas e instalações elétricas temporárias no exterior.\n• Mantenha os acessos e saídas de emergência do recinto livres e desobstruídos."
             else:
-                risco_meteo = "ESTADO NORMAL: Sem riscos meteorológicos severos previstos para o período do evento."
-                rec_pop = "• Adote as medidas de precaução habituais e desfrute do evento com segurança."
-                rec_org = "• Assegure o cumprimento dos requisitos normais de licenciamento e segurança do recinto."
+                risco_meteo = "ESTADO NORMAL: Sem riscos meteorológicos severos previstos no período em análise."
+                rec_pop = "• Adote as medidas habituais de autoproteção e mantenha-se informado sobre a situação meteorológica."
+                rec_org = "• Garanta a manutenção das condições normais de segurança, acessibilidade e prevenção no recinto do evento."
         else:
             if nivel_j == "VERMELHO":
-                risco_meteo = "EXTREME RISK: Very high danger to people, property, and outdoor structures."
-                rec_pop = "• Avoid unnecessary travel during the event.\n• Stay clear of trees and temporary structures.\n• Strictly follow evacuation or shelter instructions from authorities."
+                risco_meteo = "EXTREME RISK: Severe danger to personal safety, property, and structures."
+                rec_pop = "• Avoid non-essential travel during the critical period.\n• Stay away from wooded areas, cliffs, and unprotected temporary structures.\n• Do not attempt to cross flooded roads or water channels.\n• Strictly follow all directions from Civil Protection and emergency authorities."
                 rec_org = "• Suspend or postpone outdoor activities.\n• Secure or dismantle temporary structures (tents, stages, signage).\n• Activate contingency plans and notify the public in advance."
             elif nivel_j == "LARANJA":
-                risco_meteo = "ELEVATED RISK: Potential for structural damage, falling branches, and water accumulation."
-                rec_pop = "• Drive with extra caution and avoid heavily wooded areas.\n• Do not attempt to cross flooded roads or water channels."
-                rec_org = "• Reinforce anchoring for all temporary structures (tents and stages).\n• Prepare an alternative indoor space or emergency shelter for participants.\n• Monitor wind gusts and suspend operations if safety is compromised."
+                risco_meteo = "ELEVATED RISK: High potential for structural damage, falling branches, and localized flooding."
+                rec_pop = "• Drive defensively, reduce speed, and increase safety distance.\n• Avoid staying or walking near large trees or wind-exposed structures.\n• Watch for standing water on roads and ensure private drainage is clear."
+                rec_org = "• Reinforce anchoring for all temporary structures (tents and stages).\n• Prepare an alternative covered shelter or emergency plan for attendees.\n• Monitor real-time weather and suspend operations if safety thresholds are met."
             elif nivel_j == "AMARELO":
-                risco_meteo = "MODERATE RISK: Unfavorable weather conditions for certain outdoor activities."
-                rec_pop = "• Stay attentive when walking or driving near event areas.\n• Prepare for possible rain showers or moderate wind during the event."
-                rec_org = "• Inspect fastenings for banners, covers, and outdoor electrical setups.\n• Ensure rain protection options are readily available for guests."
+                risco_meteo = "MODERATE RISK: Potential minor disruptions to outdoor activities and travel."
+                rec_pop = "• Stay alert when driving or walking in exposed areas.\n• Prepare for sudden rain showers or gusty winds.\n• Secure loose objects on balconies and outdoor areas."
+                rec_org = "• Inspect anchor points for temporary covers, banners, and outdoor electrical setups.\n• Keep emergency exits and access routes clear."
             else:
-                risco_meteo = "NORMAL STATUS: No severe weather risks expected during the event."
-                rec_pop = "• Follow standard safety practices and enjoy the event."
-                rec_org = "• Maintain routine safety and venue operational standards."
+                risco_meteo = "NORMAL STATUS: No severe weather risks expected during the analyzed period."
+                rec_pop = "• Follow standard self-protection measures and remain informed."
+                rec_org = "• Ensure routine safety, accessibility, and emergency standards are maintained."
 
         fmt_ini_pt = formatar_data_pt(dt_inicio)
         fmt_fim_pt = formatar_data_pt(dt_fim)
@@ -405,7 +402,7 @@ if not df.empty:
         if idioma == "Português":
             if tipo_alvo.startswith("População"):
                 msg_final = (
-                    f"🌧️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta de Evento\n"
+                    f"🌧️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta\n"
                     f"📅 *Período:* De {fmt_ini_pt} até {fmt_fim_pt}\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* — SETOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
@@ -413,8 +410,8 @@ if not df.empty:
                     f"• 🌧️ *Precipitação:* {desc_chuva_pop} (acumulado total: {acum_janela_total:.1f} mm)\n"
                     f"• 💨 *Vento:* {desc_vento_pop} (rajada máx: {vento_janela_max:.0f} km/h)\n"
                     f"• 🌡️ *Temperatura Média:* {temp_janela_media:.0f} °C\n"
-                    f"{picos_texto_pt}\n"
-                    f"🛡️ *Medidas de Autoproteção:*\n"
+                    f"{picos_texto_pt}\n\n"
+                    f"🛡️ *Medidas de Autoproteção e Prevenção:*\n"
                     f"{rec_pop}\n\n"
                     f"🔗 Consulte os avisos ativos do IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
                     f"_Fonte: Análise de modelos de previsão de meteorologia._"
@@ -422,15 +419,15 @@ if not df.empty:
             else:
                 prob_c = min(95, int(chuva_janela_max * 20 + 20)) if chuva_janela_max > 0 else 10
                 msg_final = (
-                    f"🛡️ *PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta para Organizadores de Eventos\n"
+                    f"🛡️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta para Organizadores de Eventos\n"
                     f"📅 *Período do Evento:* De {fmt_ini_pt} até {fmt_fim_pt}\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* | Setor: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"📊 *Valores Técnicos da Janela:* \n"
+                    f"📊 *Valores previstos no período em análise:*\n"
                     f"• 🌧️ *Precipitação:* Máx. horária de *{chuva_janela_max:.1f} mm/h* | Acumulado total: *{acum_janela_total:.1f} mm* (Probabilidade: *{prob_c}%*)\n"
                     f"• 💨 *Vento:* Rajada máxima de *{vento_janela_max:.0f} km/h*\n"
-                    f"{picos_texto_pt}\n"
-                    f"👉 *Recomendações para Organizadores:*\n"
+                    f"{picos_texto_pt}\n\n"
+                    f"👉 *Recomendações de Proteção Civil (Prevenção):*\n"
                     f"{rec_org}\n\n"
                     f"🔗 AVISOS IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
                     f"_Fonte: Análise de modelos de previsão de meteorologia._"
@@ -438,7 +435,7 @@ if not df.empty:
         else:
             if tipo_alvo.startswith("População"):
                 msg_final = (
-                    f"🌧️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Event Weather Alert\n"
+                    f"🌧️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Weather Alert\n"
                     f"📅 *Period:* From {fmt_ini_en} to {fmt_fim_en}\n\n"
                     f"⚠️ *{ico_j} {nivel_j} ALERT* — SECTOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
@@ -446,8 +443,8 @@ if not df.empty:
                     f"• 🌧️ *Rainfall:* {desc_chuva_pop} (total accum: {acum_janela_total:.1f} mm)\n"
                     f"• 💨 *Wind:* {desc_vento_pop} (peak gust: {vento_janela_max:.0f} km/h)\n"
                     f"• 🌡️ *Average Temp:* {temp_janela_media:.0f} °C\n"
-                    f"{picos_texto_en}\n"
-                    f"🛡️ *Self-Protection Measures:*\n"
+                    f"{picos_texto_en}\n\n"
+                    f"🛡️ *Self-Protection and Prevention Measures:*\n"
                     f"{rec_pop}\n\n"
                     f"🔗 Check active IPMA warnings: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
                     f"_Source: Analysis of meteorological forecasting models._"
@@ -455,15 +452,15 @@ if not df.empty:
             else:
                 prob_c = min(95, int(chuva_janela_max * 20 + 20)) if chuva_janela_max > 0 else 10
                 msg_final = (
-                    f"🛡️ *CIVIL PROTECTION OF ÓBIDOS* | Event Organizers Weather Alert\n"
+                    f"🛡️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Event Weather Alert\n"
                     f"📅 *Event Time Frame:* From {fmt_ini_en} to {fmt_fim_en}\n\n"
                     f"⚠️ *{ico_j} {nivel_j} ALERT* | Sector: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"📊 *Technical Parameters:* \n"
+                    f"📊 *Forecasted Values in Analyzed Period:*\n"
                     f"• 🌧️ *Precipitation:* Peak hourly rate of *{chuva_janela_max:.1f} mm/h* | Total accum: *{acum_janela_total:.1f} mm* (Probability: *{prob_c}%*)\n"
                     f"• 💨 *Wind:* Peak gust of *{vento_janela_max:.0f} km/h*\n"
-                    f"{picos_texto_en}\n"
-                    f"👉 *Recommendations for Organizers:*\n"
+                    f"{picos_texto_en}\n\n"
+                    f"👉 *Civil Protection Prevention Recommendations:*\n"
                     f"{rec_org}\n\n"
                     f"🔗 IPMA WARNINGS: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
                     f"_Source: Analysis of meteorological forecasting models._"
@@ -490,7 +487,7 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # GRÁFICOS MULTI-PARÂMETRO COM EIXOS TEMPORAIS CLAROS (HORA E DIA DE ACORDO COM A IMAGEM)
+    # GRÁFICOS MULTI-PARÂMETRO COM EIXOS TEMPORAIS CLAROS
     # ==============================================================================
     st.subheader(f"📈 Análise Avançada — {setor_selecionado}")
     

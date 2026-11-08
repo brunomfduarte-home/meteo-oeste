@@ -8,14 +8,14 @@ import pydeck as pdk
 from datetime import datetime, time, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Avisos UNDRR",
+    page_title="Proteção Civl de Óbidos — Módulo de Avisos e Alertas Meteorológicos",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel tático de Proteção Civil, mapeamento territorial, análise de picos e gerador de avisos (Padrão UNDRR).")
+st.title("🛡️ Previsões — Concelho de Óbidos")
+st.markdown("Painel tático de Proteção Civil, mapeamento territorial, análise de picos e gerador de avisos multilíngue com pop-ups automáticos.")
 
 # ==============================================================================
 # SEGMENTAÇÃO GEOMORFOLÓGICA E POLÍGONOS DOS SETORES DE ÓBIDOS
@@ -130,6 +130,17 @@ if not df.empty:
     else:
         nivel, cor_alerta = "VERDE", "success"
 
+    # ==============================================================================
+    # SISTEMA DE POP-UP AUTOMÁTICO (TOAST) PARA PARÂMETROS PRÓXIMOS OU EM AVISO
+    # ==============================================================================
+    # Limiar de proximidade (ex: Vento >= 60 km/h aproxima-se do Amarelo de 70; Chuva >= 8 mm/h aproxima-se de 10)
+    proximo_de_aviso = (pico_r >= 60) or (pico_c >= 8)
+
+    if nivel in ["AMARELO", "LARANJA", "VERMELHO"]:
+        st.toast(f"🚨 ATENÇÃO: Aviso {nivel} ativo ou iminente em {setor_selecionado}! Sugere-se emissão de notificação.", icon="⚠️")
+    elif proximo_de_aviso:
+        st.toast(f"⚡ Parâmetros próximos do limiar de aviso em {setor_selecionado} (Rajada: {pico_r:.1f} km/h).", icon="🔔")
+
     # Alerta Principal no Topo
     mensagem_topo = f"🚨 **ESTADO DE ALERTA: {nivel}** | Vista: {setor_selecionado} | Grau de Confiança (ECMWF): **{confianca}%**"
     if cor_alerta == "error": st.error(mensagem_topo)
@@ -207,27 +218,26 @@ if not df.empty:
     st.divider()
 
     # ==============================================================================
-    # MÓDULO DE GESTÃO DE EVENTOS E AVISOS (PADRÃO UNDRR)
+    # MÓDULO MULTILÍNGUE DE GESTÃO DE AVISOS E EVENTOS (PADRÃO UNDRR)
     # ==============================================================================
     st.subheader("📢 Central de Avisos & Recomendações (Padrão UNDRR)")
-    st.markdown("Selecione a data e hora do evento ou período crítico para gerar alertas objetivos para a **População** e para os **Organizadores**.")
+    st.markdown("Gere alertas concisos e objetivos para a **População** (em Português ou Inglês) e para **Organizadores de Eventos**.")
+
+    idioma = st.radio("Idioma do Comunicado / Language", ["Português", "English"], horizontal=True)
 
     with st.container():
         col_ev1, col_ev2, col_ev3 = st.columns(3)
         with col_ev1:
-            data_evento = st.date_input("Data do Evento", value=datetime.today().date() + timedelta(days=1))
+            data_evento = st.date_input("Data / Date", value=datetime.today().date() + timedelta(days=1))
         with col_ev2:
-            hora_evento = st.time_input("Hora de Início", value=time(15, 0))
+            hora_evento = st.time_input("Hora de Início / Start Time", value=time(15, 0))
         with col_ev3:
-            duracao_horas = st.slider("Duração Estimada (Horas)", min_value=1, max_value=12, value=4)
+            duracao_horas = st.slider("Duração (Horas) / Duration (Hours)", min_value=1, max_value=12, value=4)
 
-        # Cruzamento com os dados da hora específica selecionada
         dt_inicio_evento = datetime.combine(data_evento, hora_evento)
         dt_fim_evento = dt_inicio_evento + timedelta(hours=duracao_horas)
 
-        # Filtrar dados do dataframe para a janela do evento
         df_evento = df[(df['Hora'] >= dt_inicio_evento) & (df['Hora'] <= dt_fim_evento)]
-
         if not df_evento.empty:
             chuva_ev = df_evento['Precipitação (mm)'].max()
             acum_ev = df_evento['Precipitação (mm)'].sum()
@@ -236,39 +246,97 @@ if not df.empty:
         else:
             chuva_ev, acum_ev, vento_ev, temp_ev = 0.0, 0.0, 25.0, 15.0
 
-        # Seleção do tipo de mensagem a gerar
-        tipo_alvo = st.radio("Destinatário do Aviso:", ["População em Geral", "Organizadores de Eventos ao Ar Livre"])
+        tipo_alvo = st.radio(
+            "Destinatário / Target Audience:", 
+            ["População em Geral (General Public)", "Organizadores de Eventos (Event Organizers)"]
+        )
 
-        if tipo_alvo == "População em Geral":
-            nivel_emoji = "🟡 AVISO AMARELO" if nivel == "AMARELO" else ("🟠 AVISO LARANJA" if nivel == "LARANJA" else ("🔴 AVISO VERMELHO" if nivel == "VERMELHO" else "🟢 ESTADO NORMAL"))
-            msg_populacao = (
-                f"🌧️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Meteorologia\n"
-                f"📅 *{dt_inicio_evento.strftime('%A, %d de %B de %Y').capitalize()}* ({dt_inicio_evento.strftime('%H:%M')}h - {dt_fim_evento.strftime('%H:%M')}h)\n\n"
-                f"{nivel_emoji} — RISCO METEOROLÓGICO NO SETOR: *{setor_selecionado}*\n"
-                f"Previsão de rajadas até *{vento_ev:.0f} km/h* e precipitação acumulada de *{acum_ev:.1f} mm*.\n\n"
-                f"🌡️ *Condições:* Temperatura média de {temp_ev:.0f} °C.\n\n"
-                f"⚠️ *Medidas de Autoproteção (UNDRR):*\n"
-                f"• Modere a velocidade e aumente a distância de segurança na via pública.\n"
-                f"• Não atravesse zonas inundadas ou passagens molhadas.\n"
-                f"• Em caso de vento forte ou trovoada, evite áreas arborizadas e estruturas suspensas.\n\n"
-                f"Fonte: Centro de Comando Operacional de Óbidos (Base ECMWF)"
-            )
-            st.code(msg_populacao, language="markdown")
-
+        if idioma == "Português":
+            if nivel == "VERMELHO":
+                risco_meteo = "RISCO EXTREMO: Condições meteorológicas severas com perigo grave para pessoas, bens e estruturas."
+            elif nivel == "LARANJA":
+                risco_meteo = "RISCO ELEVADO: Condições meteorológicas moderadas a severas com potencial de danos e perturbações."
+            elif nivel == "AMARELO":
+                risco_meteo = "RISCO MODERADO: Condições desfavoráveis para certas atividades e circulação."
+            else:
+                risco_meteo = "ESTADO NORMAL: Sem riscos meteorológicos severos previstos."
         else:
-            prob_chuva_calc = min(95, int(chuva_ev * 20 + 20)) if chuva_ev > 0 else 10
-            msg_organizadores = (
-                f"🛡️ *PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta para Eventos\n"
-                f"📅 *{dt_inicio_evento.strftime('%A, %d de %B')}*, das {dt_inicio_evento.strftime('%H:%M')} às {dt_fim_evento.strftime('%H:%M')}\n\n"
-                f"🌧️ *Probabilidade de Chuva:* {prob_chuva_calc}% na janela horária. Rajadas previstas de *{vento_ev:.0f} km/h*.\n\n"
-                f"👉 *Recomendações Operacionais:*\n"
-                f"• Valide a estrutura e amarração de tendas, palcos ou coberturas amovíveis.\n"
-                f"• Reserve obrigatoriamente um plano ou espaço coberto alternativo.\n"
-                f"• Se o evento envolver fogueiras ou brasas (ex: magustos), suspenda o acendimento ao ar livre caso o vento supere os 40 km/h.\n"
-                f"• Confirme a decisão final junto da Proteção Civil 2 horas antes do início.\n\n"
-                f"_Previsão tática sujeita a atualização contínua._"
-            )
-            st.code(msg_organizadores, language="markdown")
+            if nivel == "VERMELHO":
+                risco_meteo = "EXTREME RISK: Severe weather conditions posing severe danger to people, property, and structures."
+            elif nivel == "LARANJA":
+                risco_meteo = "ELEVATED RISK: Moderate to severe weather conditions with potential for damage and disruptions."
+            elif nivel == "AMARELO":
+                risco_meteo = "MODERATE RISK: Unfavorable conditions for certain activities and mobility."
+            else:
+                risco_meteo = "NORMAL STATUS: No severe weather risks expected."
+
+        if idioma == "Português":
+            if tipo_alvo.startswith("População"):
+                msg_final = (
+                    f"🌧️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta\n"
+                    f"📅 *{dt_inicio_evento.strftime('%A, %d de %B de %Y').capitalize()}* ({dt_inicio_evento.strftime('%H:%M')}h - {dt_fim_evento.strftime('%H:%M')}h)\n\n"
+                    f"⚠️ *AVISO {nivel}* — SETOR: *{setor_selecionado}*\n"
+                    f"*{risco_meteo}*\n"
+                    f"• Rajadas máximas previstas: *{vento_ev:.0f} km/h*\n"
+                    f"• Precipitação acumulada: *{acum_ev:.1f} mm*\n\n"
+                    f"🛡️ *Medidas de Autoproteção:*\n"
+                    f"• Acompanhe ativamente os avisos meteorológicos oficiais.\n"
+                    f"• Siga rigorosamente as recomendações da Proteção Civil e autoridades.\n"
+                    f"• Evite comportamentos de risco (não atravesse zonas inundadas, evite zonas arborizadas).\n\n"
+                    f"🔗 Consulte os avisos ativos do IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
+                    f"_Fonte: Análise de modelos de previsão de meteorologia._"
+                )
+            else:
+                prob_c = min(95, int(chuva_ev * 20 + 20)) if chuva_ev > 0 else 10
+                msg_final = (
+                    f"🛡️ *PROTEÇÃO CIVIL DE ÓBIDOS* | Alerta para Eventos\n"
+                    f"📅 *{dt_inicio_evento.strftime('%A, %d de %B')}*, das {dt_inicio_evento.strftime('%H:%M')} às {dt_fim_evento.strftime('%H:%M')}\n\n"
+                    f"⚠️ *AVISO {nivel}* | Setor: *{setor_selecionado}*\n"
+                    f"*{risco_meteo}*\n"
+                    f"• Probabilidade de chuva: *{prob_c}%* | Vento/Rajadas até *{vento_ev:.0f} km/h*.\n\n"
+                    f"👉 *Recomendações para Organizadores:*\n"
+                    f"• Valide a estabilidade e amarração de estruturas amovíveis (tendas/palcos).\n"
+                    f"• Tenha um plano ou espaço coberto alternativo.\n"
+                    f"• Suspenda atividades ao ar livre se os limiares de segurança forem ultrapassados.\n"
+                    f"• Acompanhe os avisos e siga as autoridades.\n\n"
+                    f"🔗 AVISOS IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
+                    f"_Fonte: Análise de modelos de previsão de meteorologia._"
+                )
+        else:
+            if tipo_alvo.startswith("População"):
+                msg_final = (
+                    f"🌧️ *MUNICIPAL CIVIL PROTECTION SERVICE OF ÓBIDOS* | Weather Alert\n"
+                    f"📅 *{dt_inicio_evento.strftime('%A, %B %d, %Y')}* ({dt_inicio_evento.strftime('%H:%M')} - {dt_fim_evento.strftime('%H:%M')})\n\n"
+                    f"⚠️ *{nivel} ALERT* — SECTOR: *{setor_selecionado}*\n"
+                    f"*{risco_meteo}*\n"
+                    f"• Expected peak gust winds: *{vento_ev:.0f} km/h*\n"
+                    f"• Accumulated precipitation: *{acum_ev:.1f} mm*\n\n"
+                    f"🛡️ *Self-Protection Measures:*\n"
+                    f"• Closely monitor official weather warnings.\n"
+                    f"• Strictly follow instructions from Civil Protection and authorities.\n"
+                    f"• Avoid risky behavior (do not cross flooded areas, avoid wooded zones).\n\n"
+                    f"🔗 Check active IPMA warnings: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
+                    f"_Source: Analysis of meteorological forecasting models._"
+                )
+            else:
+                prob_c = min(95, int(chuva_ev * 20 + 20)) if chuva_ev > 0 else 10
+                msg_final = (
+                    f"🛡️ *CIVIL PROTECTION OF ÓBIDOS* | Event Weather Alert\n"
+                    f"📅 *{dt_inicio_evento.strftime('%A, %B %d')}*, from {dt_inicio_evento.strftime('%H:%M')} to {dt_fim_evento.strftime('%H:%M')}\n\n"
+                    f"⚠️ *{nivel} ALERT* | Sector: *{setor_selecionado}*\n"
+                    f"*{risco_meteo}*\n"
+                    f"• Rain probability: *{prob_c}%* | Gust winds up to *{vento_ev:.0f} km/h*.\n\n"
+                    f"👉 *Recommendations for Organizers:*\n"
+                    f"• Check stability and anchoring of temporary structures (tents/stages).\n"
+                    f"• Prepare an alternative covered space or contingency plan.\n"
+                    f"• Suspend outdoor activities if safety thresholds are exceeded.\n"
+                    f"• Follow weather updates and authority guidelines.\n\n"
+                    f"🔗 IPMA WARNINGS: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA\n"
+                    f"_Source: Analysis of meteorological forecasting models._"
+                )
+
+        st.success("Mensagem gerada com sucesso! Pode copiar o bloco abaixo para partilhar:")
+        st.code(msg_final, language="markdown")
 
     st.divider()
 

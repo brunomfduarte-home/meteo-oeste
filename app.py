@@ -158,3 +158,23 @@ if not df_hourly.empty:
 
 else:
     st.error("Erro ao sincronizar dados operacionais com a estação meteorológica.")
+import streamlit as st
+import pandas as pd
+import requests
+import plotly.express as px
+from datetime import datetime, timedelta
+
+st.set_page_config(
+    page_title="Meteo Oeste — Operacional & Lagoa de Óbidos",
+    page_icon="🌊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.title("🌊 Centro de Operações — Lagoa de Óbidos & Região do Oeste")
+st.markdown("Painel de Apoio à Decisão com cruzamento de **Meteorologia (IPMA/Open-Meteo)**, **Nowcast de Vento/Chuva** e **Previsão de Marés**.")
+
+# Configuração de Coordenadas e Zonas de Risco da Lagoa
+coords = {
+    "Lagoa de Óbidos (Bom Sucesso / Margens)": {"lat": 39.3800, "lon": -9.2200, "risco": "Inundações por galgamento maregráfico e escoamento do Arnóia"},
+    "

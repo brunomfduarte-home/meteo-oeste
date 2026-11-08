@@ -8,14 +8,14 @@ import pydeck as pdk
 from datetime import datetime, time, timedelta
 
 st.set_page_config(
-    page_title="Meteo Óbidos — Comando Operacional & Avisos IPMA",
+    page_title="Meteo Óbidos — Comando Operacional & Análise Ponto a Ponto",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.title("🛡️ Centro de Comando Operacional — Concelho de Óbidos")
-st.markdown("Painel tático de Proteção Civil, mapeamento territorial por polígonos, análise de picos temporais e gerador de avisos multilíngue.")
+st.markdown("Painel tático com **localização dinâmica no mapa (ponto específico)**, análise por polígonos e gerador de avisos IPMA/UNDRR.")
 
 # ==============================================================================
 # SEGMENTAÇÃO GEOMORFOLÓGICA E POLÍGONOS DOS SETORES DE ÓBIDOS
@@ -52,12 +52,35 @@ setores_obidos = {
             [-9.150, 39.355], [-9.080, 39.355], 
             [-9.080, 39.415], [-9.150, 39.415]
         ]
+    },
+    "📍 Ponto Específico (GPS Personalizado)": {
+        "lat": 39.3600, "lon": -9.1570,
+        "perfil": "Coordenadas geográficas personalizadas definidas pelo utilizador.",
+        "polygon": []
     }
 }
 
 st.sidebar.header("⚙️ Parâmetros de Análise Global")
 setor_selecionado = st.sidebar.selectbox("Selecionar Setor / Vista", list(setores_obidos.keys()))
-info_setor = setores_obidos[setor_selecionado]
+
+# Se selecionar Ponto Específico, ativa os seletores de Lat/Lon na sidebar
+if setor_selecionado == "📍 Ponto Específico (GPS Personalizado)":
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📍 Localização Específica (GPS)")
+    lat_custom = st.sidebar.number_input("Latitude", value=39.3607, format="%.4f")
+    lon_custom = st.sidebar.number_input("Longitude", value=-9.1572, format="%.4f")
+    nome_ponto_custom = st.sidebar.text_input("Nome/Ref. do Ponto", value="Recinto / Ponto Específico")
+    
+    lat_analise = lat_custom
+    lon_analise = lon_custom
+    setores_obidos["📍 Ponto Específico (GPS Personalizado)"]["lat"] = lat_custom
+    setores_obidos["📍 Ponto Específico (GPS Personalizado)"]["lon"] = lon_custom
+    setores_obidos["📍 Ponto Específico (GPS Personalizado)"]["perfil"] = f"Análise focada em {nome_ponto_custom} ({lat_custom:.4f}, {lon_custom:.4f})."
+    info_setor = setores_obidos["📍 Ponto Específico (GPS Personalizado)"]
+else:
+    info_setor = setores_obidos[setor_selecionado]
+    lat_analise = info_setor["lat"]
+    lon_analise = info_setor["lon"]
 
 dias_historico = st.sidebar.slider("Dias de Calibração (Passado)", min_value=1, max_value=5, value=3)
 dias_previsao = st.sidebar.slider("Dias de Previsão Operacional", min_value=1, max_value=7, value=5)
@@ -83,9 +106,9 @@ def obter_dados_cruzados(lat, lon, past, forecast):
         return df
     return pd.DataFrame()
 
-# Tratamento para visão consolidada vs setorial
+# Tratamento para visão consolidada vs setorial vs ponto específico
 if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
-    sub_chaves = [k for k in setores_obidos.keys() if k != "🌍 Todo o Concelho (Consolidado)"]
+    sub_chaves = [k for k in setores_obidos.keys() if k not in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (GPS Personalizado)"]]
     dfs = []
     for sk in sub_chaves:
         df_sub = obter_dados_cruzados(setores_obidos[sk]["lat"], setores_obidos[sk]["lon"], dias_historico, dias_previsao)
@@ -96,7 +119,7 @@ if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
     else:
         df = pd.DataFrame()
 else:
-    df = obter_dados_cruzados(info_setor["lat"], info_setor["lon"], dias_historico, dias_previsao)
+    df = obter_dados_cruzados(lat_analise, lon_analise, dias_historico, dias_previsao)
 
 if not df.empty:
     agora = datetime.now()
@@ -135,9 +158,9 @@ if not df.empty:
     # ==============================================================================
     proximo_de_aviso = (pico_r >= 60) or (pico_c >= 8)
     if nivel in ["AMARELO", "LARANJA", "VERMELHO"]:
-        st.toast(f"{icone_ipma} ATENÇÃO: Aviso {nivel} ativo ou iminente em {setor_selecionado}!", icon="⚠️")
+        st.toast(f"{icone_ipma} ATENÇÃO: Aviso {nivel} ativo ou iminente na localização selecionada!", icon="⚠️")
     elif proximo_de_aviso:
-        st.toast(f"⚡ Parâmetros próximos do limiar de aviso em {setor_selecionado} (Rajada: {pico_r:.1f} km/h).", icon="🔔")
+        st.toast(f"⚡ Parâmetros próximos do limiar de aviso na localização selecionada (Rajada: {pico_r:.1f} km/h).", icon="🔔")
 
     # Cabeçalho Principal com Destaque Sublinhado à Cor do Aviso
     st.markdown(
@@ -150,14 +173,14 @@ if not df.empty:
     )
 
     # ==============================================================================
-    # MAPA TÁTICO COM POLÍGONOS SETORIAIS COLORIDOS
+    # MAPA TÁTICO COM POLÍGONOS E PONTO DE INTERESSE
     # ==============================================================================
-    st.subheader("🗺️ Mapa Tático de Risco — Setores do Concelho de Óbidos")
-    st.caption("As áreas territoriais encontram-se preenchidas com a cor correspondente ao respetivo nível de aviso meteorológico ativo.")
+    st.subheader("🗺️ Mapa Tático de Risco — Concelho de Óbidos & Ponto Selecionado")
+    st.caption("Visualização geográfica das zonas geomorfológicas e marcador de localização de alta precisão.")
 
     dados_mapa = []
     for nome_s, info_s in setores_obidos.items():
-        if nome_s == "🌍 Todo o Concelho (Consolidado)":
+        if nome_s in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (GPS Personalizado)"]:
             continue
         df_s = obter_dados_cruzados(info_s["lat"], info_s["lon"], 1, 2)
         if not df_s.empty:
@@ -165,13 +188,13 @@ if not df.empty:
             c_max = df_s['Precipitação (mm)'].max()
             
             if r_max > 110 or c_max > 35:
-                niv, ico, cor = "VERMELHO", "🔴", [255, 0, 0, 160]
+                niv, ico, cor = "VERMELHO", "🔴", [255, 0, 0, 150]
             elif r_max > 90 or c_max > 20:
-                niv, ico, cor = "LARANJA", "🟠", [255, 140, 0, 160]
+                niv, ico, cor = "LARANJA", "🟠", [255, 140, 0, 150]
             elif r_max > 70 or c_max > 10:
-                niv, ico, cor = "AMARELO", "🟡", [255, 215, 0, 160]
+                niv, ico, cor = "AMARELO", "🟡", [255, 215, 0, 150]
             else:
-                niv, ico, cor = "VERDE", "🟢", [0, 128, 0, 140]
+                niv, ico, cor = "VERDE", "🟢", [0, 128, 0, 130]
                 
             dados_mapa.append({
                 "setor": nome_s,
@@ -189,14 +212,30 @@ if not df.empty:
         get_polygon="polygon",
         get_fill_color="cor",
         get_line_color=[255, 255, 255, 200],
-        get_line_width=60,
+        get_line_width=50,
         pickable=True,
         auto_highlight=True,
     )
 
-    view_state_obidos = pdk.ViewState(latitude=39.3750, longitude=-9.1700, zoom=10.6, pitch=15)
+    # Camada adicional de ponto selecionado no mapa
+    dados_ponto = [{
+        "nome": "Ponto de Análise",
+        "lat": lat_analise,
+        "lon": lon_analise,
+        "cor": [0, 102, 255, 255]
+    }]
+    camada_ponto = pdk.Layer(
+        "ScatterplotLayer",
+        data=pd.DataFrame(dados_ponto),
+        get_position=["lon", "lat"],
+        get_color="cor",
+        get_radius=300,
+        pickable=True
+    )
+
+    view_state_obidos = pdk.ViewState(latitude=lat_analise, longitude=lon_analise, zoom=11.0, pitch=15)
     mapa_deck = pdk.Deck(
-        layers=[camada_poligonos],
+        layers=[camada_poligonos, camada_ponto],
         initial_view_state=view_state_obidos,
         tooltip={"text": "Setor: {setor}\nAlerta: {nivel}\nRajada Máx: {rajada} km/h\nChuva Máx: {chuva} mm/h"}
     )
@@ -278,7 +317,6 @@ if not df.empty:
             ["População em Geral (General Public)", "Organizadores de Eventos (Event Organizers)"]
         )
 
-        # Classificação do Nível de Aviso com Ícones
         if vento_janela_max > 110 or chuva_janela_max > 35:
             nivel_j, ico_j = "VERMELHO", "🔴"
         elif vento_janela_max > 90 or chuva_janela_max > 20:
@@ -288,7 +326,6 @@ if not df.empty:
         else:
             nivel_j, ico_j = "VERDE", "🟢"
 
-        # Inicialização explícita de todas as variáveis de texto para evitar NameError
         risco_meteo = ""
         rec_pop = ""
         rec_org = ""

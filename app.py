@@ -246,7 +246,6 @@ if not df.empty:
     
     col_c1, col_c2, col_c3 = st.columns(3)
     
-    # Intervalos formatados rigorosamente: das X horas do dia X às Y horas do dia Y
     h_ini_c = hora_c - timedelta(hours=1)
     h_fim_c = hora_c + timedelta(hours=1)
     intervalo_chuva_str = formatar_intervalo_pico(h_ini_c, h_fim_c)
@@ -459,7 +458,8 @@ if not df.empty:
         tickformat="%d/%m\n%H:%M",
         gridcolor="#e9ecef",
         showgrid=True,
-        tickfont=dict(size=11, color="#333"),
+        tickfont=dict(size=11, color="#333", family="Arial"),
+        showticklabels=True,
         row=4, col=1
     )
     fig_spotwx.update_yaxes(gridcolor="#e9ecef", showgrid=True)
@@ -578,7 +578,6 @@ if not df.empty:
 
         st.divider()
 
-        # Determinar nível mais gravoso por defeito
         if vento_janela_max > 110 or chuva_janela_max > 35:
             nivel_j, ico_j = "VERMELHO", "🔴"
         elif vento_janela_max > 90 or chuva_janela_max > 20:
@@ -607,12 +606,6 @@ if not df.empty:
             desc_vento_pop = "Vento forte com rajadas percetíveis."
         else:
             desc_vento_pop = "Vento muito forte e severo com risco de queda de ramos e estragos."
-
-        # Sugestão de emissão de aviso baseada no cenário mais gravoso
-        if tipo_alvo.startswith("População"):
-            sugestao_emissao = f"⚠️ **RECOMENDAÇÃO OPERACIONAL:** Sugere-se a emissão imediata de aviso à população para as próximas {horizonte_horas}h devido às previsões gravosas detetadas."
-        else:
-            sugestao_emissao = f"⚠️ **RECOMENDAÇÃO OPERACIONAL:** Sugere-se a emissão de aviso preventivo para os organizadores do evento face ao cenário meteorológico mais gravoso previsto para o período."
 
         if idioma == "Português":
             if nivel_j == "VERMELHO":
@@ -658,7 +651,6 @@ if not df.empty:
                     f"🕒 *Emitido em:* {data_consulta_fmt} (Janela: próximas {horizonte_horas}h)\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* (Cenário Mais Gravoso) — SETOR: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"{sugestao_emissao}\n\n"
                     f"🗣️ *O que esperar:*\n"
                     f"• 🌧️ *Precipitação:* {desc_chuva_pop} (acumulado: {acum_janela_total:.1f} mm)\n"
                     f"• 💨 *Vento:* {desc_vento_pop} (rajada máx: {vento_janela_max:.0f} km/h - {cardeal_vento_str} {seta_vento_str})\n"
@@ -678,7 +670,6 @@ if not df.empty:
                     f"🕒 *Emitido em:* {data_consulta_fmt}\n\n"
                     f"⚠️ *{ico_j} AVISO {nivel_j}* (Cenário Mais Gravoso) | Setor: *{setor_selecionado}*\n"
                     f"*{risco_meteo}*\n\n"
-                    f"{sugestao_emissao}\n\n"
                     f"📊 *Valores previstos no período em análise:*\n"
                     f"• 🌧️ *Precipitação:* Máx. horária de *{chuva_janela_max:.1f} mm/h* | Acumulado total: *{acum_janela_total:.1f} mm* (Prob.: *{prob_c}%*)\n"
                     f"• 💨 *Vento:* Rajada máxima de *{vento_janela_max:.0f} km/h* ({cardeal_vento_str} {seta_vento_str})\n"

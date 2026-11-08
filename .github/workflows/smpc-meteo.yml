@@ -1,0 +1,41 @@
+name: Meteorologia SMPC Óbidos
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '12 * * * *'
+permissions:
+  contents: write
+concurrency:
+  group: smpc-meteo-snapshot
+  cancel-in-progress: false
+jobs:
+  reanalise:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reanalisar e guardar na branch meteo-data
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=refs/heads/meteo-data
+          git config user.name 'SMPC Meteorologia'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          parent=()
+          status=0
+          git ls-remote --exit-code origin "$branch" || status=$?
+          if [ "$status" -eq 0 ]; then
+            git fetch --no-tags origin "$branch"
+            git show FETCH_HEAD:snapshot.json > "$RUNNER_TEMP/meteo-previous.json"
+            parent=(-p "$(git rev-parse FETCH_HEAD)")
+          elif [ "$status" -ne 2 ]; then
+            exit "$status"
+          fi
+          python smpc_meteo.py --previous "$RUNNER_TEMP/meteo-previous.json" --output "$RUNNER_TEMP/meteo-snapshot.json"
+          blob=$(git hash-object -w "$RUNNER_TEMP/meteo-snapshot.json")
+          tree=$(printf '100644 blob %s\tsnapshot.json\n' "$blob" | git mktree)
+          commit=$(git commit-tree "$tree" "${parent[@]}" -m "Reanálise meteorológica de Óbidos")
+          git push origin "$commit:$branch"

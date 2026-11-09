@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-09T06:16:55.231139+00:00",
-  "anchor": "2026-11-09T06:00:00+00:00",
+  "generatedAt": "2026-11-09T17:27:08.696946+00:00",
+  "anchor": "2026-11-09T17:00:00+00:00",
   "warnings": [
     {
       "level": "Amarelo",
@@ -21,7 +21,7 @@
     {
       "level": "Amarelo",
       "phenomenon": "Precipitação",
-      "start": "2026-11-11T12:00:00+00:00",
+      "start": "2026-11-11T05:00:00+00:00",
       "end": "2026-11-11T18:00:00+00:00",
       "description": "Precipitação por vezes forte e persistente.",
       "issued": null
@@ -32,6 +32,14 @@
       "start": "2026-11-09T21:00:00+00:00",
       "end": "2026-11-10T15:00:00+00:00",
       "description": "Condições favoráveis para ocorrência de fenómenos meteorológicos localizados, como: trovoada; precipitação localmente forte, com acumulação entre 10 a 20 mm em 1 h; rajadas entre 70 e 90 km/h.",
+      "issued": null
+    },
+    {
+      "level": "Laranja",
+      "phenomenon": "Vento",
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T21:00:00+00:00",
+      "description": "Vento sudoeste com rajadas da ordem de 100 a 120 km/h.",
       "issued": null
     }
   ],
@@ -55,7 +63,7 @@
     {
       "level": "Amarelo",
       "phenomenon": "Precipitação",
-      "start": "2026-11-11T12:00:00+00:00",
+      "start": "2026-11-11T05:00:00+00:00",
       "end": "2026-11-11T18:00:00+00:00",
       "description": "Precipitação por vezes forte e persistente.",
       "issued": null
@@ -67,6 +75,14 @@
       "end": "2026-11-10T15:00:00+00:00",
       "description": "Condições favoráveis para ocorrência de fenómenos meteorológicos localizados, como: trovoada; precipitação localmente forte, com acumulação entre 10 a 20 mm em 1 h; rajadas entre 70 e 90 km/h.",
       "issued": null
+    },
+    {
+      "level": "Laranja",
+      "phenomenon": "Vento",
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T21:00:00+00:00",
+      "description": "Vento sudoeste com rajadas da ordem de 100 a 120 km/h.",
+      "issued": null
     }
   ],
   "issues": {},
@@ -75,52 +91,43 @@
       "source": "GFS",
       "window": "0–6 h",
       "metric": "Rajada",
-      "value": 49.0,
+      "value": 52.6,
       "level": 0,
-      "start": "2026-11-09T10:00:00+00:00",
-      "end": "2026-11-09T11:00:00+00:00"
+      "start": "2026-11-09T21:00:00+00:00",
+      "end": "2026-11-09T22:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "0–6 h",
       "metric": "Chuva 1h",
-      "value": 0.2,
+      "value": 1.1,
       "level": 0,
-      "start": "2026-11-09T10:00:00+00:00",
-      "end": "2026-11-09T11:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "0–6 h",
-      "metric": "Chuva 6h",
-      "value": 0.2,
-      "level": 0,
-      "start": "2026-11-09T06:00:00+00:00",
-      "end": "2026-11-09T12:00:00+00:00"
+      "start": "2026-11-09T21:00:00+00:00",
+      "end": "2026-11-09T22:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "0–24 h",
       "metric": "Rajada",
-      "value": 58.3,
+      "value": 55.4,
       "level": 0,
-      "start": "2026-11-09T20:00:00+00:00",
-      "end": "2026-11-09T21:00:00+00:00"
+      "start": "2026-11-10T12:00:00+00:00",
+      "end": "2026-11-10T13:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "0–24 h",
       "metric": "Chuva 1h",
-      "value": 3.6,
+      "value": 1.1,
       "level": 0,
-      "start": "2026-11-09T22:00:00+00:00",
-      "end": "2026-11-09T23:00:00+00:00"
+      "start": "2026-11-09T21:00:00+00:00",
+      "end": "2026-11-09T22:00:00+00:00"
     },
     {
       "source": "GFS",
       "window": "0–24 h",
       "metric": "Chuva 6h",
-      "value": 8.0,
+      "value": 3.2,
       "level": 0,
       "start": "2026-11-09T18:00:00+00:00",
       "end": "2026-11-10T00:00:00+00:00"
@@ -129,106 +136,79 @@
       "source": "GFS",
       "window": "24–48 h",
       "metric": "Rajada",
-      "value": 53.3,
-      "level": 0,
-      "start": "2026-11-10T11:00:00+00:00",
-      "end": "2026-11-10T12:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "24–48 h",
-      "metric": "Chuva 1h",
-      "value": 2.4,
-      "level": 0,
-      "start": "2026-11-10T20:00:00+00:00",
-      "end": "2026-11-10T21:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "24–48 h",
-      "metric": "Chuva 6h",
-      "value": 9.8,
-      "level": 0,
-      "start": "2026-11-10T18:00:00+00:00",
-      "end": "2026-11-11T00:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "48–72 h",
-      "metric": "Rajada",
-      "value": 57.6,
-      "level": 0,
-      "start": "2026-11-11T12:00:00+00:00",
-      "end": "2026-11-11T13:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "48–72 h",
-      "metric": "Chuva 1h",
-      "value": 4.3,
+      "value": 46.4,
       "level": 0,
       "start": "2026-11-11T08:00:00+00:00",
       "end": "2026-11-11T09:00:00+00:00"
     },
     {
       "source": "GFS",
-      "window": "48–72 h",
+      "window": "24–48 h",
+      "metric": "Chuva 1h",
+      "value": 7.8,
+      "level": 0,
+      "start": "2026-11-11T13:00:00+00:00",
+      "end": "2026-11-11T14:00:00+00:00"
+    },
+    {
+      "source": "GFS",
+      "window": "24–48 h",
       "metric": "Chuva 6h",
-      "value": 20.0,
+      "value": 19.9,
       "level": 0,
       "start": "2026-11-11T06:00:00+00:00",
       "end": "2026-11-11T12:00:00+00:00"
     },
     {
       "source": "GFS",
-      "window": "+72 a +168 h",
+      "window": "48–72 h",
       "metric": "Rajada",
-      "value": 76.3,
-      "level": 1,
-      "start": "2026-11-16T05:00:00+00:00",
-      "end": "2026-11-16T06:00:00+00:00"
+      "value": 39.2,
+      "level": 0,
+      "start": "2026-11-12T13:00:00+00:00",
+      "end": "2026-11-12T14:00:00+00:00"
     },
     {
       "source": "GFS",
-      "window": "+72 a +168 h",
-      "metric": "Chuva 6h",
-      "value": 16.2,
+      "window": "48–72 h",
+      "metric": "Chuva 1h",
+      "value": 0.9,
       "level": 0,
-      "start": "2026-11-16T00:00:00+00:00",
-      "end": "2026-11-16T06:00:00+00:00"
+      "start": "2026-11-12T13:00:00+00:00",
+      "end": "2026-11-12T14:00:00+00:00"
+    },
+    {
+      "source": "GFS",
+      "window": "48–72 h",
+      "metric": "Chuva 6h",
+      "value": 2.0,
+      "level": 0,
+      "start": "2026-11-12T06:00:00+00:00",
+      "end": "2026-11-12T12:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "0–6 h",
       "metric": "Rajada",
-      "value": 47.9,
+      "value": 50.4,
       "level": 0,
-      "start": "2026-11-09T11:00:00+00:00",
-      "end": "2026-11-09T12:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "0–6 h",
-      "metric": "Chuva 6h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-09T06:00:00+00:00",
-      "end": "2026-11-09T12:00:00+00:00"
+      "start": "2026-11-09T17:00:00+00:00",
+      "end": "2026-11-09T18:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "0–24 h",
       "metric": "Rajada",
-      "value": 57.6,
+      "value": 56.2,
       "level": 0,
-      "start": "2026-11-09T14:00:00+00:00",
-      "end": "2026-11-09T15:00:00+00:00"
+      "start": "2026-11-10T14:00:00+00:00",
+      "end": "2026-11-10T15:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "0–24 h",
       "metric": "Chuva 6h",
-      "value": 11.7,
+      "value": 10.2,
       "level": 0,
       "start": "2026-11-09T18:00:00+00:00",
       "end": "2026-11-10T00:00:00+00:00"
@@ -237,72 +217,42 @@
       "source": "ECMWF",
       "window": "24–48 h",
       "metric": "Rajada",
-      "value": 59.0,
-      "level": 0,
-      "start": "2026-11-10T13:00:00+00:00",
-      "end": "2026-11-10T14:00:00+00:00"
+      "value": 82.1,
+      "level": 1,
+      "start": "2026-11-11T14:00:00+00:00",
+      "end": "2026-11-11T15:00:00+00:00"
     },
     {
       "source": "ECMWF",
       "window": "24–48 h",
-      "metric": "Chuva 6h",
-      "value": 10.8,
-      "level": 0,
-      "start": "2026-11-10T12:00:00+00:00",
-      "end": "2026-11-10T18:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "48–72 h",
-      "metric": "Rajada",
-      "value": 70.9,
-      "level": 1,
-      "start": "2026-11-11T17:00:00+00:00",
-      "end": "2026-11-11T18:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "48–72 h",
-      "metric": "Chuva 6h",
-      "value": 33.6,
-      "level": 1,
-      "start": "2026-11-11T12:00:00+00:00",
-      "end": "2026-11-11T18:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "value": 60.1,
-      "level": 0,
-      "start": "2026-11-15T23:00:00+00:00",
-      "end": "2026-11-16T00:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "+72 a +168 h",
       "metric": "Chuva 6h",
       "value": 11.4,
       "level": 0,
-      "start": "2026-11-14T18:00:00+00:00",
-      "end": "2026-11-15T00:00:00+00:00"
+      "start": "2026-11-11T06:00:00+00:00",
+      "end": "2026-11-11T12:00:00+00:00"
+    },
+    {
+      "source": "ECMWF",
+      "window": "48–72 h",
+      "metric": "Rajada",
+      "value": 57.6,
+      "level": 0,
+      "start": "2026-11-11T20:00:00+00:00",
+      "end": "2026-11-11T21:00:00+00:00"
+    },
+    {
+      "source": "ECMWF",
+      "window": "48–72 h",
+      "metric": "Chuva 6h",
+      "value": 1.8,
+      "level": 0,
+      "start": "2026-11-11T18:00:00+00:00",
+      "end": "2026-11-12T00:00:00+00:00"
     },
     {
       "source": "NOAA GEFS",
       "window": "0–6 h",
       "metric": "Rajada",
-      "n": 31,
-      "N": 31,
-      "probability": {
-        "Amarelo": 0,
-        "Laranja": 0,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "NOAA GEFS",
-      "window": "0–6 h",
-      "metric": "Chuva 6h",
       "n": 31,
       "N": 31,
       "probability": {
@@ -342,7 +292,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 3,
+        "Amarelo": 2,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -354,9 +304,9 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 0,
-        "Laranja": 0,
-        "Vermelho": 0
+        "Amarelo": 4,
+        "Laranja": 3,
+        "Vermelho": 1
       }
     },
     {
@@ -366,7 +316,7 @@
       "n": 31,
       "N": 31,
       "probability": {
-        "Amarelo": 0,
+        "Amarelo": 1,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -374,30 +324,6 @@
     {
       "source": "NOAA GEFS",
       "window": "48–72 h",
-      "metric": "Chuva 6h",
-      "n": 31,
-      "N": 31,
-      "probability": {
-        "Amarelo": 3,
-        "Laranja": 1,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "NOAA GEFS",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "n": 31,
-      "N": 31,
-      "probability": {
-        "Amarelo": 3,
-        "Laranja": 0,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "NOAA GEFS",
-      "window": "+72 a +168 h",
       "metric": "Chuva 6h",
       "n": 31,
       "N": 31,
@@ -411,18 +337,6 @@
       "source": "ECMWF ENS",
       "window": "0–6 h",
       "metric": "Rajada",
-      "n": 51,
-      "N": 51,
-      "probability": {
-        "Amarelo": 0,
-        "Laranja": 0,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "ECMWF ENS",
-      "window": "0–6 h",
-      "metric": "Chuva 6h",
       "n": 51,
       "N": 51,
       "probability": {
@@ -462,9 +376,9 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 3,
-        "Laranja": 0,
-        "Vermelho": 0
+        "Amarelo": 20,
+        "Laranja": 10,
+        "Vermelho": 2
       }
     },
     {
@@ -474,7 +388,7 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 0,
+        "Amarelo": 1,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -486,9 +400,9 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 24,
-        "Laranja": 11,
-        "Vermelho": 2
+        "Amarelo": 21,
+        "Laranja": 12,
+        "Vermelho": 1
       }
     },
     {
@@ -498,32 +412,8 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 15,
-        "Laranja": 3,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "ECMWF ENS",
-      "window": "+72 a +168 h",
-      "metric": "Rajada",
-      "n": 51,
-      "N": 51,
-      "probability": {
-        "Amarelo": 8,
+        "Amarelo": 1,
         "Laranja": 1,
-        "Vermelho": 0
-      }
-    },
-    {
-      "source": "ECMWF ENS",
-      "window": "+72 a +168 h",
-      "metric": "Chuva 6h",
-      "n": 51,
-      "N": 51,
-      "probability": {
-        "Amarelo": 0,
-        "Laranja": 0,
         "Vermelho": 0
       }
     }
@@ -531,7 +421,7 @@
   "signal_baseline": {
     "Rajada": {
       "level": 0,
-      "end": "2026-11-09T21:00:00+00:00"
+      "end": "2026-11-10T13:00:00+00:00"
     },
     "Chuva 6h": {
       "level": 0,
@@ -626,6 +516,19 @@
     }
   ],
   "extendedIssues": {},
-  "changes": [],
-  "withdrawn": []
+  "changes": [
+    "IPMA: Amarelo · Precipitação · 11/11 05:00 WET–11/11 18:00 WET",
+    "IPMA: Laranja · Vento · 11/11 12:00 WET–11/11 21:00 WET",
+    "IPMA: aviso anterior alterado ou retirado · Precipitação · 11/11 12:00 WET–11/11 18:00 WET"
+  ],
+  "withdrawn": [
+    {
+      "level": "Amarelo",
+      "phenomenon": "Precipitação",
+      "start": "2026-11-11T12:00:00+00:00",
+      "end": "2026-11-11T18:00:00+00:00",
+      "description": "Precipitação por vezes forte e persistente.",
+      "issued": null
+    }
+  ]
 }

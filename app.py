@@ -421,11 +421,10 @@ else:
     nivel, icone_ipma, cor_hex = "VERDE", "🟢", "#008000"
 
 st.markdown(
-    f"""
-    <div style="border-bottom: 4px solid {cor_hex}; padding-bottom: 8px; margin-bottom: 16px;">
-        <h3>{icone_ipma} ESTADO DE ALERTA (CENÁRIO MAIS GRAVOSO): <span style="color: {cor_hex};">{nivel}</span> | Vista: {setor_selecionado} | Confiança ECMWF: <b>{confianca}%</b> | Última atualização: {agora.strftime('%H:%M')}</h3>
-    </div>
-    """,
+    "<div style='border-bottom: 4px solid " + cor_hex + "; padding-bottom: 8px; margin-bottom: 16px;'>"
+    "<h3>" + icone_ipma + " ESTADO DE ALERTA (CENÁRIO MAIS GRAVOSO): <span style='color: " + cor_hex + ";'>" + nivel + "</span> | "
+    "Vista: " + setor_selecionado + " | Confiança ECMWF: <b>" + str(confianca) + "%</b> | "
+    "Última atualização: " + agora.strftime("%H:%M") + "</h3></div>",
     unsafe_allow_html=True,
 )
 
@@ -437,42 +436,32 @@ h_ini_r, h_fim_r = hora_r - timedelta(hours=1), hora_r + timedelta(hours=1)
 
 with col_c1:
     st.markdown(
-        f"""
-        <div style="background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #3399ff;">
-            <div style="font-size: 12px; font-weight: bold; color: #555;">🌧️ PRECIPITAÇÃO MÁX. (1H)</div>
-            <div style="font-size: 26px; font-weight: 800; color: #1f77b4; margin: 4px 0;">{pico_c:.1f} <span style="font-size: 13px;">mm/h</span></div>
-            <div style="font-size: 11px; color: #333;">🕒 {formatar_intervalo_pico(h_ini_c, h_fim_c)}</div>
-        </div>
-        """,
+        "<div style='background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #3399ff;'>"
+        "<div style='font-size: 12px; font-weight: bold; color: #555;'>🌧️ PRECIPITAÇÃO MÁX. (1H)</div>"
+        "<div style='font-size: 26px; font-weight: 800; color: #1f77b4; margin: 4px 0;'>" + f"{pico_c:.1f}" + " <span style='font-size: 13px;'>mm/h</span></div>"
+        "<div style='font-size: 11px; color: #333;'>🕒 " + formatar_intervalo_pico(h_ini_c, h_fim_c) + "</div></div>",
         unsafe_allow_html=True,
     )
 with col_c2:
     st.markdown(
-        f"""
-        <div style="background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #0055aa;">
-            <div style="font-size: 12px; font-weight: bold; color: #555;">💧 ACUMULADO MÁX. (24H)</div>
-            <div style="font-size: 26px; font-weight: 800; color: #0055aa; margin: 4px 0;">{max_chuva_24h:.1f} <span style="font-size: 13px;">mm/24h</span></div>
-            <div style="font-size: 11px; color: #333;">📊 Saturação de solo / Bacia Arnóia</div>
-        </div>
-        """,
+        "<div style='background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #0055aa;'>"
+        "<div style='font-size: 12px; font-weight: bold; color: #555;'>💧 ACUMULADO MÁX. (24H)</div>"
+        "<div style='font-size: 26px; font-weight: 800; color: #0055aa; margin: 4px 0;'>" + f"{max_chuva_24h:.1f}" + " <span style='font-size: 13px;'>mm/24h</span></div>"
+        "<div style='font-size: 11px; color: #333;'>📊 Saturação de solo / Bacia Arnóia</div></div>",
         unsafe_allow_html=True,
     )
 with col_c3:
     st.markdown(
-        f"""
-        <div style="background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #d62728;">
-            <div style="font-size: 12px; font-weight: bold; color: #555;">💨 RAJADA MÁX. & DIREÇÃO</div>
-            <div style="font-size: 26px; font-weight: 800; color: #d62728; margin: 4px 0;">{pico_r:.1f} <span style="font-size: 13px;">km/h</span> <span style="font-size: 18px;">{seta_vento_str}</span></div>
-            <div style="font-size: 11px; color: #333;">🕒 {formatar_intervalo_pico(h_ini_r, h_fim_r)}</div>
-        </div>
-        """,
+        "<div style='background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #d62728;'>"
+        "<div style='font-size: 12px; font-weight: bold; color: #555;'>💨 RAJADA MÁX. & DIREÇÃO</div>"
+        "<div style='font-size: 26px; font-weight: 800; color: #d62728; margin: 4px 0;'>" + f"{pico_r:.1f}" + " <span style='font-size: 13px;'>km/h</span> <span style='font-size: 18px;'>" + seta_vento_str + "</span></div>"
+        "<div style='font-size: 11px; color: #333;'>🕒 " + formatar_intervalo_pico(h_ini_r, h_fim_r) + "</div></div>",
         unsafe_allow_html=True,
     )
 with col_tabela:
     st.markdown(
-        """
-        <div style="background-color: #f8f9fa; padding: 11px; border-radius: 10px; border: 1px solid #e0e0e0; font-size: 12px;">
-            <b>📋 Critérios de Aviso IPMA (Referência):</b>
-            <table style="width:100%; margin-top:4px; font-size:11px; border-collapse: collapse;">
-              <tr style="background:#eef2f5;"><th style="text-align:left; padding:3px;">Parâmetro</th><th style="padding:3px;">🟡 Amarelo</th><th style="padding:3px;">🟠 Laranja</th><th style="padding:3px;">🔴 Vermelho</th></tr>
-      
+        "<div style='background-color: #f8f9fa; padding: 11px; border-radius: 10px; border: 1px solid #e0e0e0; font-size: 12px;'>"
+        "<b>📋 Critérios de Aviso IPMA (Referência):</b>"
+        "<table style='width:100%; margin-top:4px; font-size:11px; border-collapse: collapse;'>"
+        "<tr style='background:#eef2f5;'><th style='text-align:left; padding:3px;'>Parâmetro</th><th style='padding:3px;'>🟡 Amarelo</th><th style='padding:3px;'>🟠 Laranja</th><th style='padding:3px;'>🔴 Vermelho</th></tr>"
+        "<tr><td><b>Rajadas Vento</b></td><td>70

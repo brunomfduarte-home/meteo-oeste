@@ -98,7 +98,15 @@ def gerar_dados_contingencia(past: int, forecast: int) -> pd.DataFrame:
     )
 
 
-def enviar_notificacao_push(titulo: str, mensagem: str, prioridade: int = 4, ntfy_topic: str = "", tg_token: str = "", tg_chat: str = "", webhook_url: str = ""):
+def enviar_notificacao_push(
+    titulo: str,
+    mensagem: str,
+    prioridade: int = 4,
+    ntfy_topic: str = "",
+    tg_token: str = "",
+    tg_chat: str = "",
+    webhook_url: str = "",
+):
     enviados = []
     erros = []
     if ntfy_topic.strip():
@@ -486,5 +494,4 @@ def obter_boletim_multimodelo_14d(lat: float, lon: float):
                 "wind_direction_10m_ecmwf_ifs025": "Dir_ECMWF",
                 "relative_humidity_2m_ecmwf_ifs025": "HR_ECMWF",
             }
-            for col_api, col_dest in mapa_colunas.items():
-    
+            for col_api, col_des

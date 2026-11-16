@@ -494,4 +494,471 @@ def obter_boletim_multimodelo_14d(lat: float, lon: float):
                 "wind_direction_10m_ecmwf_ifs025": "Dir_ECMWF",
                 "relative_humidity_2m_ecmwf_ifs025": "HR_ECMWF",
             }
-            for col_api, col_des
+            for col_api, col_dest in mapa_colunas.items():
+                df_m[col_dest] = h.get(col_api, np.nan)
+            guardar_cache_disco(chave_cache, df_m)
+            return df_m, "online"
+    except Exception as exc:
+        st.session_state["ultimo_erro_api"] = str(exc)
+
+    df_cache, _ = ler_cache_disco(chave_cache)
+    if not df_cache.empty:
+        return df_cache, "cache_disco"
+    return pd.DataFrame(), "indisponivel"
+
+
+origem_dados = "online"
+ts_origem = None
+with st.spinner("A sincronizar telemetria e modelos numéricos..."):
+    if setor_selecionado == "🌍 Todo o Concelho (Consolidado)":
+        sub_chaves = [
+            k
+            for k in setores_obidos
+            if k not in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (Google Maps / Coordenadas)"]
+        ]
+        dfs = []
+        for sk in sub_chaves:
+            df_sub, orig_sub, ts_sub = obter_dados_cruzados(
+                setores_obidos[sk]["lat"],
+                setores_obidos[sk]["lon"],
+                dias_historico,
+                dias_previsao,
+            )
+            if orig_sub != "online":
+                origem_dados = orig_sub
+                ts_origem = ts_sub
+            dfs.append(df_sub.set_index("Hora"))
+        df = pd.concat(dfs).groupby("Hora").mean().reset_index()
+    else:
+        df, origem_dados, ts_origem = obter_dados_cruzados(lat_analise, lon_analise, dias_historico, dias_previsao)
+
+    df_14d, origem_14d = obter_boletim_multimodelo_14d(lat_analise, lon_analise)
+
+if origem_dados == "cache_disco":
+    st.info(
+        f"🔄 **Modo de Continuidade Operacional Ativo:** A API Open-Meteo apresentou lentidão; "
+        f"a apresentar última previsão válida em cache ({ts_origem})."
+    )
+elif origem_dados == "contingencia":
+    st.warning(
+        "⚠️ **Modo de Contingência Local:** Sem resposta imediata da API externa e sem cache prévio. "
+        "A análise prossegue sem interrupção; clique em Forçar Atualização assim que a rede estabilizar."
+    )
+
+agora = datetime.now()
+df_passado = df[df["Hora"] <= agora]
+df_futuro = df[df["Hora"] > agora]
+
+pico_r = df_futuro["Rajada (km/h)"].max() if not df_futuro.empty else df["Rajada (km/h)"].max()
+idx_r = (df_futuro if not df_futuro.empty else df)["Rajada (km/h)"].idxmax()
+hora_r = df.loc[idx_r, "Hora"]
+dir_r = df.loc[idx_r, "Direção Vento (°)"]
+
+pico_c = df_futuro["Precipitação (mm)"].max() if not df_futuro.empty else df["Precipitação (mm)"].max()
+idx_c = (df_futuro if not df_futuro.empty else df)["Precipitação (mm)"].idxmax()
+hora_c = df.loc[idx_c, "Hora"]
+
+max_chuva_24h = (
+    df_futuro["Precipitação (mm)"].rolling(24, min_periods=1).sum().max()
+    if not df_futuro.empty
+    else df["Precipitação (mm)"].rolling(24, min_periods=1).sum().max()
+)
+
+if not df_passado.empty and len(df_passado) > 10:
+    estabilidade_vento = df_passado["Vento (km/h)"].std()
+    confianca = max(70, min(95, int(98 - estabilidade_vento * 1.5)))
+else:
+    confianca = 88
+
+seta_vento_str = deg_para_seta(dir_r)
+cardeal_vento_str = deg_para_direcao(dir_r)
+
+if pico_r > 110 or pico_c > 35:
+    nivel, icone_ipma, cor_hex = "VERMELHO", "🔴", "#FF0000"
+elif pico_r > 90 or pico_c > 20:
+    nivel, icone_ipma, cor_hex = "LARANJA", "🟠", "#FF8C00"
+elif pico_r > 70 or pico_c > 10:
+    nivel, icone_ipma, cor_hex = "AMARELO", "🟡", "#FFD700"
+else:
+    nivel, icone_ipma, cor_hex = "VERDE", "🟢", "#008000"
+
+evento_analogo, similaridade = calcular_analogia_historica(pico_r, pico_c, max_chuva_24h)
+
+if testar_push_btn:
+    ok_canais, err_canais = enviar_notificacao_push(
+        titulo=f"[TESTE SMPC ÓBIDOS] Alerta {nivel} - {setor_selecionado}",
+        mensagem=(
+            f"Teste operacional de push. Rajada máx: {pico_r:.1f} km/h | "
+            f"Chuva 1h: {pico_c:.1f} mm/h | Análogo: {evento_analogo['depressao']} ({evento_analogo['mes_ano']})."
+        ),
+        prioridade=4,
+        ntfy_topic=ntfy_topic,
+        tg_token=tg_token,
+        tg_chat=tg_chat,
+        webhook_url=webhook_url,
+    )
+    if ok_canais:
+        st.sidebar.success(f"Push de teste enviado via: {', '.join(ok_canais)}")
+    if err_canais:
+        st.sidebar.error(f"Falha no envio: {', '.join(err_canais)}")
+
+if push_ativo and nivel in ["LARANJA", "VERMELHO"]:
+    assinatura_alerta = f"{nivel}_{setor_selecionado}_{hora_r.strftime('%Y%m%d%H')}_{hora_c.strftime('%Y%m%d%H')}"
+    if st.session_state.get("ultimo_push_enviado") != assinatura_alerta:
+        prio = 5 if nivel == "VERMELHO" else 4
+        titulo_push = f"{icone_ipma} ALERTA {nivel} - SMPC Óbidos ({setor_selecionado})"
+        corpo_push = (
+            f"Cenário meteorológico significativo previsto:\n"
+            f"• Rajada Máx: {pico_r:.1f} km/h ({cardeal_vento_str}) às {hora_r.strftime('%d/%m %H:%M')}\n"
+            f"• Precipitação Máx: {pico_c:.1f} mm/h (24h: {max_chuva_24h:.1f} mm) às {hora_c.strftime('%d/%m %H:%M')}\n"
+            f"• Análogo Histórico: {evento_analogo['depressao']} ({evento_analogo['mes_ano']}) - {similaridade}%"
+        )
+        ok_canais, _ = enviar_notificacao_push(
+            titulo=titulo_push,
+            mensagem=corpo_push,
+            prioridade=prio,
+            ntfy_topic=ntfy_topic,
+            tg_token=tg_token,
+            tg_chat=tg_chat,
+            webhook_url=webhook_url,
+        )
+        if ok_canais:
+            st.session_state["ultimo_push_enviado"] = assinatura_alerta
+            st.toast(f"📲 Notificação Push ({nivel}) enviada via {', '.join(ok_canais)}!", icon="🚨")
+    titulo_js = json.dumps(f"ALERTA {nivel} - SMPC Óbidos")
+    corpo_js = json.dumps(
+        f"Setor: {setor_selecionado} | Rajada: {pico_r:.1f} km/h | Chuva 1h: {pico_c:.1f} mm/h | "
+        f"Análogo: {evento_analogo['depressao']} ({evento_analogo['mes_ano']})"
+    )
+    components.html(
+        "<script>"
+        "if ('Notification' in window) {"
+        "  if (Notification.permission === 'granted') {"
+        "    new Notification(" + titulo_js + ", { body: " + corpo_js + " });"
+        "  } else if (Notification.permission !== 'denied') {"
+        "    Notification.requestPermission().then(function(p) { if (p === 'granted') { new Notification(" + titulo_js + ", { body: " + corpo_js + " }); } });"
+        "  }"
+        "}"
+        "</script>",
+        height=0,
+    )
+
+st.markdown(
+    "<div style='border-bottom: 4px solid " + cor_hex + "; padding-bottom: 8px; margin-bottom: 16px;'>"
+    "<h3>" + icone_ipma + " ESTADO DE ALERTA (CENÁRIO MAIS GRAVOSO): <span style='color: " + cor_hex + ";'>" + nivel + "</span> | "
+    "Vista: " + setor_selecionado + " | Confiança ECMWF: <b>" + str(confianca) + "%</b> | "
+    "Última atualização: " + agora.strftime("%H:%M") + "</h3></div>",
+    unsafe_allow_html=True,
+)
+
+st.subheader("📌 Resumo Executivo, Períodos de Pico & Limiares IPMA")
+col_c1, col_c2, col_c3, col_tabela = st.columns([1.1, 1.1, 1.1, 1.7])
+
+h_ini_c, h_fim_c = hora_c - timedelta(hours=1), hora_c + timedelta(hours=1)
+h_ini_r, h_fim_r = hora_r - timedelta(hours=1), hora_r + timedelta(hours=1)
+
+with col_c1:
+    st.markdown(
+        "<div style='background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #3399ff;'>"
+        "<div style='font-size: 12px; font-weight: bold; color: #555;'>🌧️ PRECIPITAÇÃO MÁX. (1H)</div>"
+        "<div style='font-size: 26px; font-weight: 800; color: #1f77b4; margin: 4px 0;'>" + f"{pico_c:.1f}" + " <span style='font-size: 13px;'>mm/h</span></div>"
+        "<div style='font-size: 11px; color: #333;'>🕒 " + formatar_intervalo_pico(h_ini_c, h_fim_c) + "</div></div>",
+        unsafe_allow_html=True,
+    )
+with col_c2:
+    st.markdown(
+        "<div style='background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #0055aa;'>"
+        "<div style='font-size: 12px; font-weight: bold; color: #555;'>💧 ACUMULADO MÁX. (24H)</div>"
+        "<div style='font-size: 26px; font-weight: 800; color: #0055aa; margin: 4px 0;'>" + f"{max_chuva_24h:.1f}" + " <span style='font-size: 13px;'>mm/24h</span></div>"
+        "<div style='font-size: 11px; color: #333;'>📊 Saturação de solo / Bacia Arnóia</div></div>",
+        unsafe_allow_html=True,
+    )
+with col_c3:
+    st.markdown(
+        "<div style='background-color: #f8f9fa; padding: 14px; border-radius: 10px; border-left: 6px solid #d62728;'>"
+        "<div style='font-size: 12px; font-weight: bold; color: #555;'>💨 RAJADA MÁX. & DIREÇÃO</div>"
+        "<div style='font-size: 26px; font-weight: 800; color: #d62728; margin: 4px 0;'>" + f"{pico_r:.1f}" + " <span style='font-size: 13px;'>km/h</span> <span style='font-size: 18px;'>" + seta_vento_str + "</span></div>"
+        "<div style='font-size: 11px; color: #333;'>🕒 " + formatar_intervalo_pico(h_ini_r, h_fim_r) + "</div></div>",
+        unsafe_allow_html=True,
+    )
+with col_tabela:
+    st.markdown(
+        "<div style='background-color: #f8f9fa; padding: 11px; border-radius: 10px; border: 1px solid #e0e0e0; font-size: 12px;'>"
+        "<b>📋 Critérios de Aviso IPMA (Referência):</b>"
+        "<table style='width:100%; margin-top:4px; font-size:11px; border-collapse: collapse;'>"
+        "<tr style='background:#eef2f5;'><th style='text-align:left; padding:3px;'>Parâmetro</th><th style='padding:3px;'>🟡 Amarelo</th><th style='padding:3px;'>🟠 Laranja</th><th style='padding:3px;'>🔴 Vermelho</th></tr>"
+        "<tr><td><b>Rajadas Vento</b></td><td>70 - 90 km/h</td><td>90 - 110 km/h</td><td>> 110 km/h</td></tr>"
+        "<tr><td><b>Chuva (1h)</b></td><td>10 - 20 mm/h</td><td>20 - 35 mm/h</td><td>> 35 mm/h</td></tr>"
+        "<tr><td><b>Chuva (6h)</b></td><td>20 - 40 mm</td><td>40 - 60 mm</td><td>> 60 mm</td></tr>"
+        "</table></div>",
+        unsafe_allow_html=True,
+    )
+
+st.divider()
+
+st.subheader("🕰️ Comparação com Episódios Extremos de Meteorologia (Histórico de Óbidos)")
+
+col_hist1, col_hist2 = st.columns([1.25, 1.75])
+with col_hist1:
+    if pico_r < 55 and pico_c < 6 and max_chuva_24h < 15:
+        st.success("✅ **Cenário Sem Analogia Severa:** Os valores previstos encontram-se abaixo dos limiares de depressões extremas registadas em Óbidos.")
+    else:
+        st.warning(f"⚠️ **Episódio Extremo Mais Próximo:** **{evento_analogo['depressao']}** ({evento_analogo['mes_ano']}) — Similaridade: **{similaridade}%**")
+    st.markdown(
+        f"* **Depressão / Fenómeno:** {evento_analogo['depressao']}\n"
+        f"* **Data do Episódio:** {evento_analogo['mes_ano']}\n"
+        f"* **Tipologia:** {evento_analogo['tipo']}\n"
+        f"* **Registo Histórico:** Rajadas `{evento_analogo['rajada_ref']:.0f} km/h` | Chuva 1h `{evento_analogo['chuva_1h_ref']:.0f} mm/h` | Chuva 24h `{evento_analogo['chuva_24h_ref']:.0f} mm`\n"
+        f"* **Previsão Atual:** Rajadas `{pico_r:.1f} km/h` | Chuva 1h `{pico_c:.1f} mm/h` | Chuva 24h `{max_chuva_24h:.1f} mm`"
+    )
+with col_hist2:
+    st.markdown(
+        "<div style='background-color: #fff8e7; padding: 15px; border-radius: 10px; border-left: 5px solid #ff8c00;'>"
+        "<div style='font-weight: bold; color: #b35900; margin-bottom: 6px;'>🌪️ " + evento_analogo["depressao"] + " (" + evento_analogo["mes_ano"] + ") — Efeitos Provocados no Território:</div>"
+        "<div style='font-size: 13px; color: #222; margin-bottom: 8px;'><b>Setores Mais Afetados:</b> " + evento_analogo["setores_criticos"] + "</div>"
+        "<div style='font-size: 13px; color: #222; margin-bottom: 8px;'><b>Efeitos Provocados:</b> " + evento_analogo["efeitos_provocados"] + "</div>"
+        "<div style='font-size: 13px; color: #004085;'><b>🛡️ Ação Preventiva (SMPC):</b> " + evento_analogo["medidas"] + "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+with st.expander("📚 Consultar Tabela Completa de Episódios Extremos Históricos em Óbidos"):
+    df_hist_ref = pd.DataFrame(
+        [
+            {
+                "Depressão / Fenómeno": e["depressao"],
+                "Mês / Ano": e["mes_ano"],
+                "Rajada Ref. (km/h)": e["rajada_ref"],
+                "Chuva 1h (mm/h)": e["chuva_1h_ref"],
+                "Chuva 24h (mm)": e["chuva_24h_ref"],
+                "Efeitos Provocados": e["efeitos_provocados"],
+            }
+            for e in EVENTOS_HISTORICOS_OBIDOS
+        ]
+    )
+    st.dataframe(df_hist_ref, use_container_width=True, hide_index=True)
+
+st.divider()
+
+tab_meteo, tab_boletim, tab_mapa_radar, tab_alertas = st.tabs(
+    [
+        "📊 Meteogramas Operacionais",
+        "📑 Boletim Técnico (14 Dias)",
+        "🗺️ Mapa Tático & Radar",
+        "📢 Comunicados",
+    ]
+)
+
+with tab_meteo:
+    fig_spotwx = make_subplots(
+        rows=4,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.06,
+        subplot_titles=(
+            "💨 Vento Sustentado e Rajadas Máximas (km/h)",
+            "🌧️ Intensidade de Precipitação Horária (mm/h)",
+            "🌡️ Temperatura do Ar (°C)",
+            "📉 Pressão Atmosférica à Superfície (hPa)",
+        ),
+    )
+    fig_spotwx.add_trace(
+        go.Scatter(
+            x=df["Hora"],
+            y=df["Rajada (km/h)"],
+            name="Rajada (km/h)",
+            line=dict(color="#d62728", width=2, dash="dot"),
+            fill="tonexty",
+            fillcolor="rgba(214, 39, 40, 0.1)",
+        ),
+        row=1,
+        col=1,
+    )
+    fig_spotwx.add_trace(
+        go.Scatter(
+            x=df["Hora"],
+            y=df["Vento (km/h)"],
+            name="Vento Sustentado (km/h)",
+            line=dict(color="#1f77b4", width=2.5),
+        ),
+        row=1,
+        col=1,
+    )
+    for _, r_row in df.iloc[::4].iterrows():
+        seta_txt = deg_para_seta(r_row["Direção Vento (°)"]).split()[0]
+        fig_spotwx.add_annotation(
+            x=r_row["Hora"],
+            y=r_row["Rajada (km/h)"] + 8,
+            text=f"{seta_txt} {r_row['Rajada (km/h)']:.0f}",
+            showarrow=False,
+            font=dict(size=9, color="#444"),
+            row=1,
+            col=1,
+        )
+    if pico_r >= 60:
+        fig_spotwx.add_hline(y=70, line_dash="dash", line_color="#ffcc00", row=1, col=1, annotation_text="Amarelo (70 km/h)")
+        fig_spotwx.add_hline(y=90, line_dash="dash", line_color="#ff6600", row=1, col=1, annotation_text="Laranja (90 km/h)")
+        fig_spotwx.add_hline(y=110, line_dash="dash", line_color="#ff0000", row=1, col=1, annotation_text="Vermelho (110 km/h)")
+    fig_spotwx.add_trace(
+        go.Bar(x=df["Hora"], y=df["Precipitação (mm)"], name="Precipitação (mm/h)", marker_color="#1f77b4", opacity=0.9),
+        row=2,
+        col=1,
+    )
+    if pico_c >= 8:
+        fig_spotwx.add_hline(y=10, line_dash="dash", line_color="#ffcc00", row=2, col=1, annotation_text="Amarelo (10 mm/h)")
+        fig_spotwx.add_hline(y=20, line_dash="dash", line_color="#ff6600", row=2, col=1, annotation_text="Laranja (20 mm/h)")
+        fig_spotwx.add_hline(y=35, line_dash="dash", line_color="#ff0000", row=2, col=1, annotation_text="Vermelho (35 mm/h)")
+    fig_spotwx.add_trace(
+        go.Scatter(x=df["Hora"], y=df["Temperatura (°C)"], name="Temperatura (°C)", line=dict(color="#ff7f0e", width=2.5)),
+        row=3,
+        col=1,
+    )
+    fig_spotwx.add_trace(
+        go.Scatter(x=df["Hora"], y=df["Pressão (hPa)"], name="Pressão (hPa)", line=dict(color="#9467bd", width=2.5)),
+        row=4,
+        col=1,
+    )
+    fig_spotwx.update_layout(height=1050, hovermode="x unified", showlegend=False, plot_bgcolor="#ffffff")
+    st.plotly_chart(fig_spotwx, use_container_width=True)
+
+with tab_boletim:
+    if not df_14d.empty:
+        df_14d["Data"] = df_14d["Hora"].dt.date
+        resumo_dias = []
+        for data_dia, grupo in df_14d.groupby("Data"):
+            dt_obj = pd.to_datetime(data_dia)
+            dia_label = f"{dias_semana_curto.get(dt_obj.strftime('%A'), '')} {dt_obj.strftime('%d/%m')}"
+            resumo_dias.append(
+                {
+                    "Dia": dia_label,
+                    "T. Mín (°C)": round(grupo["Temp_ECMWF"].min(), 1),
+                    "T. Méd (°C)": round(grupo["Temp_ECMWF"].mean(), 1),
+                    "T. Máx (°C)": round(grupo["Temp_ECMWF"].max(), 1),
+                    "Vento Méd (km/h)": round(grupo["Vento_ECMWF"].mean(), 1),
+                    "Rajada Máx (km/h)": round(grupo["Rajada_ECMWF"].max(), 1),
+                    "Dir.": f"{deg_para_seta(grupo['Dir_ECMWF'].median()).split()[0]} {deg_para_direcao(grupo['Dir_ECMWF'].median())}",
+                    "Chuva Acum (mm)": round(grupo["Chuva_ECMWF"].sum(), 1),
+                    "Chuva Máx (mm/h)": round(grupo["Chuva_ECMWF"].max(), 1),
+                    "Humidade (%)": round(grupo["HR_ECMWF"].mean(), 0),
+                }
+            )
+        st.dataframe(pd.DataFrame(resumo_dias), use_container_width=True, height=500)
+
+        fig_multi = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.08,
+            subplot_titles=("💨 Rajadas Máximas (km/h) — ECMWF vs GFS vs ICON", "🌡️ Temperatura (°C) — ECMWF vs GFS vs ICON"),
+        )
+        fig_multi.add_trace(go.Scatter(x=df_14d["Hora"], y=df_14d["Rajada_ECMWF"], name="ECMWF", line=dict(color="#d62728", width=2)), row=1, col=1)
+        fig_multi.add_trace(go.Scatter(x=df_14d["Hora"], y=df_14d["Rajada_GFS"], name="GFS", line=dict(color="#1f77b4", width=1.5, dash="dash")), row=1, col=1)
+        fig_multi.add_trace(go.Scatter(x=df_14d["Hora"], y=df_14d["Rajada_ICON"], name="ICON", line=dict(color="#2ca02c", width=1.5, dash="dot")), row=1, col=1)
+        fig_multi.add_trace(go.Scatter(x=df_14d["Hora"], y=df_14d["Temp_ECMWF"], name="Temp ECMWF", line=dict(color="#ff7f0e", width=2)), row=2, col=1)
+        fig_multi.add_trace(go.Scatter(x=df_14d["Hora"], y=df_14d["Temp_GFS"], name="Temp GFS", line=dict(color="#9467bd", width=1.5, dash="dash")), row=2, col=1)
+        fig_multi.add_trace(go.Scatter(x=df_14d["Hora"], y=df_14d["Temp_ICON"], name="Temp ICON", line=dict(color="#8c564b", width=1.5, dash="dot")), row=2, col=1)
+        fig_multi.update_layout(height=580, hovermode="x unified", plot_bgcolor="#ffffff")
+        st.plotly_chart(fig_multi, use_container_width=True)
+    else:
+        st.info("Boletim multi-modelo de 14 dias indisponível de momento; a análise operacional principal mantém-se ativa.")
+
+with tab_mapa_radar:
+    dados_mapa = []
+    for nome_s, info_s in setores_obidos.items():
+        if nome_s in ["🌍 Todo o Concelho (Consolidado)", "📍 Ponto Específico (Google Maps / Coordenadas)"]:
+            continue
+        df_s, _, _ = obter_dados_cruzados(info_s["lat"], info_s["lon"], 1, 2)
+        if not df_s.empty:
+            r_max, c_max = df_s["Rajada (km/h)"].max(), df_s["Precipitação (mm)"].max()
+            if r_max > 110 or c_max > 35:
+                niv, ico, cor = "VERMELHO", "🔴", [255, 0, 0, 150]
+            elif r_max > 90 or c_max > 20:
+                niv, ico, cor = "LARANJA", "🟠", [255, 140, 0, 150]
+            elif r_max > 70 or c_max > 10:
+                niv, ico, cor = "AMARELO", "🟡", [255, 215, 0, 150]
+            else:
+                niv, ico, cor = "VERDE", "🟢", [0, 128, 0, 130]
+            dados_mapa.append(
+                {
+                    "setor": nome_s,
+                    "polygon": info_s["polygon"],
+                    "nivel": f"{ico} {niv}",
+                    "rajada": f"{r_max:.1f}",
+                    "chuva": f"{c_max:.1f}",
+                    "cor": cor,
+                }
+            )
+    if dados_mapa:
+        camada_poligonos = pdk.Layer(
+            "PolygonLayer",
+            data=pd.DataFrame(dados_mapa),
+            get_polygon="polygon",
+            get_fill_color="cor",
+            get_line_color=[255, 255, 255, 200],
+            get_line_width=50,
+            pickable=True,
+            auto_highlight=True,
+        )
+        camada_ponto = pdk.Layer(
+            "ScatterplotLayer",
+            data=pd.DataFrame([{"nome": "Ponto", "lat": lat_analise, "lon": lon_analise, "cor": [0, 102, 255, 255]}]),
+            get_position=["lon", "lat"],
+            get_color="cor",
+            get_radius=300,
+            pickable=True,
+        )
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[camada_poligonos, camada_ponto],
+                initial_view_state=pdk.ViewState(latitude=lat_analise, longitude=lon_analise, zoom=11.0, pitch=15),
+                tooltip={"text": "Setor: {setor}\nAlerta: {nivel}\nRajada Máx: {rajada} km/h\nChuva Máx: {chuva} mm/h"},
+            )
+        )
+    windy_html = (
+        "<iframe width='100%' height='450' src='https://embed.windy.com/embed2.html?"
+        f"lat={lat_analise}&lon={lon_analise}&detailLat={lat_analise}&detailLon={lon_analise}"
+        "&width=100%&height=450&zoom=10&level=surface&overlay=radar&product=radar&menu=&message=true"
+        "&marker=true&calendar=now&pressure=true&type=map&location=coordinates&metricWind=km%2Fh&metricTemp=%C2%B0C' "
+        "frameborder='0'></iframe>"
+    )
+    components.html(windy_html, height=470)
+
+with tab_alertas:
+    tipo_alvo = st.radio("Destinatário:", ["População em Geral", "Organizadores de Eventos"])
+    if tipo_alvo == "População em Geral":
+        horizonte_horas = st.selectbox("Janela de análise:", [6, 12, 24, 36], format_func=lambda x: f"Próximas {x} horas")
+        dt_inicio_aviso, dt_fim_aviso = agora, agora + timedelta(hours=horizonte_horas)
+    else:
+        col_ev1, col_ev2 = st.columns(2)
+        with col_ev1:
+            data_ev_ini = st.date_input("Data de Início", value=datetime.today().date() + timedelta(days=1))
+            hora_ev_ini = st.time_input("Hora de Início", value=time(17, 0))
+        with col_ev2:
+            data_ev_fim = st.date_input("Data de Fim", value=data_ev_ini)
+            hora_ev_fim = st.time_input("Hora de Fim", value=time(21, 0))
+        dt_inicio_aviso = datetime.combine(data_ev_ini, hora_ev_ini)
+        dt_fim_aviso = datetime.combine(data_ev_fim, hora_ev_fim)
+
+    df_janela = df[(df["Hora"] >= dt_inicio_aviso) & (df["Hora"] <= dt_fim_aviso)]
+    chuva_j = df_janela["Precipitação (mm)"].max() if not df_janela.empty else 0.0
+    acum_j = df_janela["Precipitação (mm)"].sum() if not df_janela.empty else 0.0
+    vento_j = df_janela["Rajada (km/h)"].max() if not df_janela.empty else 0.0
+
+    if vento_j > 110 or chuva_j > 35:
+        nivel_j, ico_j = "VERMELHO", "🔴"
+    elif vento_j > 90 or chuva_j > 20:
+        nivel_j, ico_j = "LARANJA", "🟠"
+    elif vento_j > 70 or chuva_j > 10:
+        nivel_j, ico_j = "AMARELO", "🟡"
+    else:
+        nivel_j, ico_j = "VERDE", "🟢"
+
+    msg_final = (
+        f"🛡️ *SERVIÇO MUNICIPAL DE PROTEÇÃO CIVIL DE ÓBIDOS*\n"
+        f"🕒 *Emitido em:* {formatar_data_pt(agora)}\n"
+        f"⚠️ *{ico_j} AVISO {nivel_j}* — Setor: *{setor_selecionado}*\n"
+        f"• 🌧️ *Precipitação:* Máx {chuva_j:.1f} mm/h (Acumulado: {acum_j:.1f} mm)\n"
+        f"• 💨 *Rajada Máxima:* {vento_j:.0f} km/h ({cardeal_vento_str} {seta_vento_str})\n"
+        f"• 🕰️ *Análogo Histórico:* {evento_analogo['depressao']} ({evento_analogo['mes_ano']}) — {similaridade}%\n"
+        "🔗 Avisos oficiais IPMA: https://www.ipma.pt/pt/otempo/prev-sam/?p=LRA"
+    )
+    st.code(msg_final, language="markdown")

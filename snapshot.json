@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-20T03:07:16.565945+00:00",
-  "anchor": "2026-11-20T03:00:00+00:00",
+  "generatedAt": "2026-11-20T11:28:11.264381+00:00",
+  "anchor": "2026-11-20T11:00:00+00:00",
   "warnings": [
     {
       "level": "Amarelo",
       "phenomenon": "Agitação Marítima",
-      "start": "2026-11-20T00:50:00+00:00",
+      "start": "2026-11-20T06:53:00+00:00",
       "end": "2026-11-20T12:00:00+00:00",
       "description": "Ondas de noroeste com 4 a 5 metros.",
       "issued": null
@@ -23,7 +23,7 @@
     {
       "level": "Amarelo",
       "phenomenon": "Agitação Marítima",
-      "start": "2026-11-20T00:50:00+00:00",
+      "start": "2026-11-20T06:53:00+00:00",
       "end": "2026-11-20T12:00:00+00:00",
       "description": "Ondas de noroeste com 4 a 5 metros.",
       "issued": null
@@ -98,7 +98,7 @@
       "N": 31,
       "probability": {
         "Amarelo": 4,
-        "Laranja": 1,
+        "Laranja": 0,
         "Vermelho": 0
       }
     },
@@ -169,7 +169,7 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 3,
+        "Amarelo": 5,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -181,7 +181,7 @@
       "n": 51,
       "N": 51,
       "probability": {
-        "Amarelo": 6,
+        "Amarelo": 1,
         "Laranja": 0,
         "Vermelho": 0
       }
@@ -202,7 +202,7 @@
       "source": "ECMWF ENS",
       "window": "48–72 h",
       "metric": "Chuva 6h",
-      "n": 50,
+      "n": 51,
       "N": 51,
       "probability": {
         "Amarelo": 0,
@@ -310,14 +310,14 @@
   ],
   "extendedIssues": {},
   "changes": [
-    "IPMA: Amarelo · Agitação Marítima · 20/11 00:50 WET–20/11 12:00 WET",
-    "IPMA: aviso anterior alterado ou retirado · Agitação Marítima · 20/11 00:00 WET–20/11 12:00 WET"
+    "IPMA: Amarelo · Agitação Marítima · 20/11 06:53 WET–20/11 12:00 WET",
+    "IPMA: aviso anterior alterado ou retirado · Agitação Marítima · 20/11 00:50 WET–20/11 12:00 WET"
   ],
   "withdrawn": [
     {
       "level": "Amarelo",
       "phenomenon": "Agitação Marítima",
-      "start": "2026-11-20T00:00:00+00:00",
+      "start": "2026-11-20T00:50:00+00:00",
       "end": "2026-11-20T12:00:00+00:00",
       "description": "Ondas de noroeste com 4 a 5 metros.",
       "issued": null

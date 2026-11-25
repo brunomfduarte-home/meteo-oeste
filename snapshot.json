@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-24T17:36:14.439217+00:00",
-  "anchor": "2026-11-24T17:00:00+00:00",
+  "generatedAt": "2026-11-25T02:21:44.652305+00:00",
+  "anchor": "2026-11-25T02:00:00+00:00",
   "warnings": [
     {
       "level": "Amarelo",
       "phenomenon": "Agitação Marítima",
-      "start": "2026-11-24T21:00:00+00:00",
+      "start": "2026-11-25T00:40:00+00:00",
       "end": "2026-11-25T12:00:00+00:00",
       "description": "Ondas de noroeste com 4 a 4,5 metros.",
       "issued": null
@@ -15,176 +15,17 @@
     {
       "level": "Amarelo",
       "phenomenon": "Agitação Marítima",
-      "start": "2026-11-24T21:00:00+00:00",
+      "start": "2026-11-25T00:40:00+00:00",
       "end": "2026-11-25T12:00:00+00:00",
       "description": "Ondas de noroeste com 4 a 4,5 metros.",
       "issued": null
     }
   ],
-  "issues": {},
+  "issues": {
+    "GFS": "<urlopen error _ssl.c:994: The handshake operation timed out>",
+    "ECMWF": "<urlopen error _ssl.c:994: The handshake operation timed out>"
+  },
   "rows": [
-    {
-      "source": "GFS",
-      "window": "0–6 h",
-      "metric": "Rajada",
-      "value": 40.7,
-      "level": 0,
-      "start": "2026-11-24T22:00:00+00:00",
-      "end": "2026-11-24T23:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "0–6 h",
-      "metric": "Chuva 1h",
-      "value": 0.1,
-      "level": 0,
-      "start": "2026-11-24T19:00:00+00:00",
-      "end": "2026-11-24T20:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "0–24 h",
-      "metric": "Rajada",
-      "value": 42.8,
-      "level": 0,
-      "start": "2026-11-24T23:00:00+00:00",
-      "end": "2026-11-25T00:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "0–24 h",
-      "metric": "Chuva 1h",
-      "value": 0.6,
-      "level": 0,
-      "start": "2026-11-25T05:00:00+00:00",
-      "end": "2026-11-25T06:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "0–24 h",
-      "metric": "Chuva 6h",
-      "value": 1.4,
-      "level": 0,
-      "start": "2026-11-25T00:00:00+00:00",
-      "end": "2026-11-25T06:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "24–48 h",
-      "metric": "Rajada",
-      "value": 33.1,
-      "level": 0,
-      "start": "2026-11-25T17:00:00+00:00",
-      "end": "2026-11-25T18:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "24–48 h",
-      "metric": "Chuva 1h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-25T17:00:00+00:00",
-      "end": "2026-11-25T18:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "24–48 h",
-      "metric": "Chuva 6h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-25T18:00:00+00:00",
-      "end": "2026-11-26T00:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "48–72 h",
-      "metric": "Rajada",
-      "value": 12.2,
-      "level": 0,
-      "start": "2026-11-27T09:00:00+00:00",
-      "end": "2026-11-27T10:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "48–72 h",
-      "metric": "Chuva 1h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-26T17:00:00+00:00",
-      "end": "2026-11-26T18:00:00+00:00"
-    },
-    {
-      "source": "GFS",
-      "window": "48–72 h",
-      "metric": "Chuva 6h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-26T18:00:00+00:00",
-      "end": "2026-11-27T00:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "0–6 h",
-      "metric": "Rajada",
-      "value": 39.6,
-      "level": 0,
-      "start": "2026-11-24T22:00:00+00:00",
-      "end": "2026-11-24T23:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "0–24 h",
-      "metric": "Rajada",
-      "value": 41.8,
-      "level": 0,
-      "start": "2026-11-24T23:00:00+00:00",
-      "end": "2026-11-25T00:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "0–24 h",
-      "metric": "Chuva 6h",
-      "value": 0.9,
-      "level": 0,
-      "start": "2026-11-25T06:00:00+00:00",
-      "end": "2026-11-25T12:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "24–48 h",
-      "metric": "Rajada",
-      "value": 26.3,
-      "level": 0,
-      "start": "2026-11-26T13:00:00+00:00",
-      "end": "2026-11-26T14:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "24–48 h",
-      "metric": "Chuva 6h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-25T18:00:00+00:00",
-      "end": "2026-11-26T00:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "48–72 h",
-      "metric": "Rajada",
-      "value": 20.9,
-      "level": 0,
-      "start": "2026-11-27T08:00:00+00:00",
-      "end": "2026-11-27T09:00:00+00:00"
-    },
-    {
-      "source": "ECMWF",
-      "window": "48–72 h",
-      "metric": "Chuva 6h",
-      "value": 0.0,
-      "level": 0,
-      "start": "2026-11-26T18:00:00+00:00",
-      "end": "2026-11-27T00:00:00+00:00"
-    },
     {
       "source": "NOAA GEFS",
       "window": "0–6 h",
@@ -453,7 +294,17 @@
   ],
   "extendedIssues": {},
   "changes": [
-    "IPMA: Amarelo · Agitação Marítima · 24/11 21:00 WET–25/11 12:00 WET"
+    "IPMA: Amarelo · Agitação Marítima · 25/11 00:40 WET–25/11 12:00 WET",
+    "IPMA: aviso anterior alterado ou retirado · Agitação Marítima · 24/11 21:00 WET–25/11 12:00 WET"
   ],
-  "withdrawn": []
+  "withdrawn": [
+    {
+      "level": "Amarelo",
+      "phenomenon": "Agitação Marítima",
+      "start": "2026-11-24T21:00:00+00:00",
+      "end": "2026-11-25T12:00:00+00:00",
+      "description": "Ondas de noroeste com 4 a 4,5 metros.",
+      "issued": null
+    }
+  ]
 }
